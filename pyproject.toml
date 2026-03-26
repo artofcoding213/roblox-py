@@ -1,0 +1,13 @@
+[project]
+name = "roblox-py"
+version = "0.1.0"
+description = "python -> luau (+ pyruntime in luau)"
+authors = []
+dependencies = []
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+roblox-py = "rbxpy:main"

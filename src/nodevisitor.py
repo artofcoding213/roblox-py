@@ -18,17 +18,16 @@ from unary import *
 
 # Note from @AsynchronousAI: This file is legit the compiler, if u wanna change up the generated code use this.
 dependencies = []
-exports = []
-
 
 class NodeVisitor(ast.NodeVisitor):
     LUACODE = "luau"
 
     """Node visitor"""
 
-    def __init__(self, context=None, config=None, variables=None, functions=None, currentFunction=None, generators=None):
+    def __init__(self, context=None, config=None, variables=None, functions=None, currentFunction=None, generators=None, exports=[], tl_decls=[]):
         dependencies = []
-        exports = []
+        self.exports = exports
+        self.tl_decls = tl_decls # we store these so classes are predefined at the top of a file
 
         self.context = context if context is not None else Context()
         self.config = config
@@ -55,6 +54,7 @@ class NodeVisitor(ast.NodeVisitor):
 
     def visit_Assign(self, node):
         """Visit assign"""
+        can_local = True
 
         for target in node.targets:
             var_name = self.get_variable_name(target)
@@ -82,12 +82,18 @@ class NodeVisitor(ast.NodeVisitor):
 
         last_ctx = self.context.last()
 
-        if last_ctx["class_name"]:
-            target = ".".join([last_ctx["class_name"], target])
+        if last_ctx['direct_class'] == True:
+            can_local = False
+            target = ".".join(["static", target])
 
-        if target.isalnum() and not last_ctx["locals"].exists(target):
+        if ('.' in target) or '[' in target:
+            can_local = False
+
+        if can_local and not self.context.exists_in_any_scope(target):
             local_keyword = "local "
             last_ctx["locals"].add_symbol(target)
+            if self.context.is_top_level():
+                self.exports.append(target)
 
         if target in reserves or target in lib.libs:
             error(f"'{target}' is a reserved Luau keyword.")
@@ -410,8 +416,19 @@ class NodeVisitor(ast.NodeVisitor):
         """Visit break"""
         self.emit("break")
 
-    def visit_Call(self, node, method=None):
+    def visit_Call(self, node: ast.Call, method=None):
         """Visit function call"""
+
+        # luau(code) macro
+        if isinstance(node.func, ast.Name) and node.func.id == "luau":
+            code_str = ""
+
+            for arg in node.args:
+                assert isinstance(arg, ast.Constant), "the luau() macro expects luau string constants"
+                code_str += arg.value
+
+            self.emit(code_str)
+            return
 
         def parse_expr(d):
             if isinstance(d, ast.Name):
@@ -424,7 +441,29 @@ class NodeVisitor(ast.NodeVisitor):
             else:
                 return ast.unparse(d)
 
-        line = "{name}({arguments})"
+        self.depend("kwargs")
+        _kwargs = []
+        kwarg_lits = []
+        did_loadkwargs = False
+        line = "__call__({name}, {kwargs}{arguments})"
+
+        for kw in node.keywords:
+            kwval = self.visit_all(kw.value, inline=True)
+
+            if kw.arg:
+                _kwargs.append([kw.arg, kwval])
+            else:
+                if len(node.keywords) == 1:
+                    _kwargs = kwval
+                    did_loadkwargs = True
+                    break
+                else:
+                    kwarg_lits.append(kwval)
+
+        if not did_loadkwargs:
+            _kwargs = '{' + (', '.join([f"{x[0]} = {x[1]}" for x in _kwargs])) + '}'
+            for l in kwarg_lits:
+                _kwargs = f"__merge__({_kwargs}, {l})"
 
         name = self.visit_all(node.func, inline=True)
 
@@ -457,6 +496,10 @@ class NodeVisitor(ast.NodeVisitor):
                     self.emit("table.clear({})".format(parse_expr(node.func.value)))
                     return
                 case "pop":
+                    if len(node.args) == 0:
+                        self.emit(f"table.remove({parse_expr(node.func.value)})")
+                        return
+
                     arg_value = ast.parse(node.args[0])
                     self.emit(
                         "table.remove({},{})".format(
@@ -465,7 +508,7 @@ class NodeVisitor(ast.NodeVisitor):
                     )
                     return
                 case "copy":
-                    self.emit("table.copy({})".format(parse_expr(node.func.value)))
+                    self.emit("table.clone({})".format(parse_expr(node.func.value)))
                     return
                 case "insert":
                     arg_value = ast.parse(node.args[0])
@@ -555,7 +598,11 @@ for _,i in {} do
                     )
                     return
 
-        self.emit(line.format(name=name, arguments=", ".join(arguments)))
+        arg_str = ", ".join(arguments)
+        if len(arguments) > 0:
+            arg_str = ", " + arg_str
+
+        self.emit(line.format(name=name, arguments=arg_str, kwargs=_kwargs))
 
     def visit_TypeAlias(self, node):
         if self.config["luau"] == None:
@@ -596,11 +643,19 @@ for _,i in {} do
             "node_name": node.name,
         }
 
-        self.emit("{local}{name} = class(function({node_name})".format(**values))
+        if values.get('local') == "local " and self.context.is_top_level():
+            values['local'] = ""
+            self.tl_decls.append(values.get('name'))
+
+        self.emit("{local}{name} = class(function({node_name}, static)".format(**values))
         self.depend("class")
 
-        self.context.push({"class_name": node.name})
+        self.context.push_scope()
+        self.context.push({"class_name": node.name, "direct_class": True})
+
         self.visit_all(node.body)
+
+        self.context.pop_scope()
         self.context.pop()
 
         self.output[-1].append("return {node_name}".format(**values))
@@ -609,8 +664,10 @@ for _,i in {} do
 
         # Return class object only in the top-level classes.
         # Not in the nested classes.
-        if self.config["class"]["return_at_the_end"] and not last_ctx["class_name"]:
-            self.emit("return {}".format(name))
+        # if self.config["class"]["return_at_the_end"] and not last_ctx["class_name"]:
+        #    self.emit("return {}".format(name))
+        if self.context.is_top_level():
+            self.exports.append(name)
 
     def visit_Compare(self, node):
         """Visit compare"""
@@ -753,14 +810,14 @@ for _,i in {} do
         """Visit function definition"""
         line = "{local} function {name}({arguments})"
 
-        self.functions.append(
-            {
-                "name": node.name,
-                "args": [arg.arg for arg in node.args.args],
-                "returns": None,
-                "body": [],
-            }
-        )
+        func_ctx = {
+            "name": node.name,
+            "args": [arg.arg for arg in node.args.args],
+            "returns": None,
+            "body": [],
+        }
+
+        self.functions.append(func_ctx)
         self.currentFunctionName = node.name
 
         last_ctx = self.context.last()
@@ -775,7 +832,17 @@ for _,i in {} do
             elif decorator_name == "staticmethod":
                 type = 1
         if last_ctx["class_name"]:
-            name = ".".join([last_ctx["class_name"], name])
+            is_static = False
+            for i in reversed(node.decorator_list):
+                decorator_name = self.visit_all(decorator, inline=True)
+                if decorator_name == "staticmethod":
+                    is_static = True
+                    break
+
+            if is_static:
+                name = ".".join(["static", name])
+            else:
+                name = ".".join([last_ctx["class_name"], name])
 
         if type == 1:
             arguments = [arg.arg for arg in node.args.args]
@@ -792,17 +859,45 @@ for _,i in {} do
             local_keyword = "local "
             last_ctx["locals"].add_symbol(name)
 
-        function_def = line.format(
-            local=local_keyword, name=name, arguments=", ".join(arguments)
-        )
+        fnvalues = {
+            'local': local_keyword,
+            'name': name,
+            'arguments': ", ".join(arguments)
+        }
+
+        if local_keyword == "local " and self.context.is_top_level() and ('.' not in name):
+            fnvalues['local'] = f"{name} = "
+            fnvalues['name'] = ''
+            self.tl_decls.append(name)
+            
+
+        function_def = line.format(**fnvalues)
 
         self.emit(function_def)
 
-        self.context.push({"class_name": ""})
+        # feature: kwargs don't overload function parameters unless **kwargs is in the parameters
+        # i.e. def foo(x, y): return x+y; print(foo(x=2, y=2)) wont work unless you change the definition to def foo(x, y, **kwargs)
+        # saves on performance
+        if node.args.kwarg != None:
+            kwarg = node.args.kwarg.arg
+
+            self.depend("kwargs")
+            self.emit(f"local {kwarg} = __kwargs__()")
+            for arg in arguments:
+                self.emit(f"{arg} = {kwarg}.get('{arg}') or {arg}")
+
+        self.context.push({"class_name": "", "direct_class": False, "locals": SymbolsStack()})
+        self.context.push_scope()
+
+        for a in func_ctx.get('args'): 
+            self.context.last()["locals"].add_symbol(a)
+
         self.visit_all(node.body)
         if node.name in self.generators:
             self.depend("generator")
             self.emit("\tyieldGenerator('{}', {})".format(node.name, "'__END'"))
+
+        self.context.pop_scope()
         self.context.pop()
 
         body = self.output[-1]
@@ -838,12 +933,22 @@ for _,i in {} do
             self.emit(line)
 
         self.currentFunctionName = None
-        # exports.append(name)
+        if self.context.is_top_level():
+            self.exports.append(name)
 
     def visit_For(self, node):
         """Visit for loop"""
+        self.context.push({ "is_for_target": True })
+        if isinstance(node.target, ast.Name):
+            target = f"_, {node.target.id}"
+        else:    
+            target = self.visit_all(node.target, inline=True)
+
+
+        self.context.pop()
+
         values = {
-            "target": self.visit_all(node.target, inline=True),
+            "target": target,
             "iter": self.visit_all(node.iter, inline=True),
         }
 
@@ -875,7 +980,11 @@ for _,i in {} do
                 "loop_label_name": continue_label,
             }
         )
+        self.context.push_scope()
+
         self.visit_all(node.body)
+
+        self.context.pop_scope()
         self.context.pop()
         
         if isAGenerator:
@@ -889,7 +998,7 @@ for _,i in {} do
         last_ctx = self.context.last()
         for name in node.names:
             last_ctx["globals"].add_symbol(name)
-            exports.append(name)
+            self.exports.append(name)
 
     def visit_Yield(self, node):
         """Visit yield"""
@@ -944,20 +1053,33 @@ for _,i in {} do
             for v in node.names:
                 self.visit_Import(v, False)
             return
-
-        if node.name.startswith("game."):
-            line = 'local {asname} = game:GetService("{name}")'
-            values["name"] = node.name[5:]
-
-        if node.asname is None:
-            if not node.name.startswith("game."):
-                values["name"] = node.name
-            values["asname"] = values["name"]
-            values["asname"] = values["asname"].split(".")[-1]
+        
+        if node.name.startswith("shared"):
+            line = 'local {asname} = require(game.ReplicatedStorage.Shared{name})'
+            values["name"] = node.name[6:]
+            values["asname"] = values["name"].split(".")[-1]
+        elif node.name.startswith("server"):
+            line = 'local {asname} = require(game.ServerScriptService.Server{name})'
+            values["name"] = node.name[6:]
+            values["asname"] = values["name"].split(".")[-1]
+        elif node.name.startswith("client"):
+            line = 'local {asname} = require(game.Players.LocalPlayer.PlayerScripts{name})'
+            values["name"] = node.name[6:]
+            values["asname"] = values["name"].split(".")[-1]
         else:
-            values["asname"] = node.asname
-            if not node.name.startswith("game."):
-                values["name"] = node.name
+            if node.name.startswith("game."):
+                line = 'local {asname} = game:GetService("{name}")'
+                values["name"] = node.name[5:]
+
+            if node.asname is None:
+                if not node.name.startswith("game."):
+                    values["name"] = node.name
+                values["asname"] = values["name"]
+                values["asname"] = values["asname"].split(".")[-1]
+            else:
+                values["asname"] = node.asname
+                if not node.name.startswith("game."):
+                    values["name"] = node.name
 
         if node.name in lib.libs:
             self.emit(getattr(libs, node.name))
@@ -973,7 +1095,37 @@ for _,i in {} do
         else:
             module = module
 
-        if module == "services" or module == "rbx.services":
+        def mod_place(inst: str):
+            xs = f"local xs = require({inst}{module[6:]})"
+            vars = {}
+
+            for name in node.names:
+                loc = name.asname or name.name
+                if loc == "*":
+                    self.emit("do")
+                    self.emit(xs)
+                    self.emit("for k, v in pairs(xs) do _G[k] = v end")
+
+                    self.emit("end")
+                    return
+
+                vars[name.name] = loc
+                self.emit(f"local {loc}")
+
+            self.emit("do")
+            self.emit(xs)
+            for tabName, varName in vars.items():
+                self.emit(f"{varName} = xs['{tabName}']")
+
+            self.emit("end")
+
+        if module.startswith("shared"):
+            mod_place("game.ReplicatedStorage.Shared")
+        elif module.startswith("client"):
+            mod_place("game.Players.LocalPlayer.PlayerScripts.Client")
+        elif module.startswith("server"):
+            mod_place("game.ServerScriptService.Server")
+        elif module == "services" or module == "rbx.services":
             for name in node.names:
                 if name.asname is None:
                     if name.name == "*":
@@ -1104,8 +1256,16 @@ for _,i in {} do
 
         for comp in node.generators:
             line = "for {target} in {iterator} do"
+
+            self.context.push({ "is_for_target": True })
+            if isinstance(comp.target, ast.Name):
+                target = f"_, {comp.target.id}"
+            else:    
+                target = self.visit_all(comp.target, inline=True)
+            self.context.pop()
+
             values = {
-                "target": self.visit_all(comp.target, inline=True),
+                "target": target,
                 "iterator": self.visit_all(comp.iter, inline=True),
             }
             line = line.format(**values)
@@ -1117,11 +1277,14 @@ for _,i in {} do
                 self.emit(line)
                 ends_count += 1
 
+        # list comprehensions are a very well-known and envied feature of python,
+        # one of the first things you tackle when compiling/transpiling python
+        # i'm not sure why there were so many issues, but it was clear it's never been tested
+
         line = (
-            "table.insert(result._data,"
-            + "{"
+            "table.insert(result,"
             + str(self.visit_all(node.elt, inline=True))
-            + "}"
+            + ")"
         )
         self.emit(line)
 
@@ -1154,6 +1317,10 @@ for _,i in {} do
     def visit_Return(self, node):
         """Visit return"""
         line = "return "
+        if not node.value:
+            self.emit(line)
+            return
+
         if node.value:
             self.functions[-1]["returns"] = (
                 str(self.visit_all(node.value, inline=True)).strip("(").strip(")")
@@ -1181,7 +1348,26 @@ for _,i in {} do
     def visit_Subscript(self, node):
         """Visit subscript"""
         line = "{name}{indexs}"
-        index = self.visit_all(node.slice, inline=True)
+
+        index = ''
+
+        # note: this may break some subscripts, notably this example:
+        # d = {}
+        # d[0] = 'hi'
+        # print(d)
+        # this should print {0: 'hi'} (and does so with python), but our transpiler will print:
+        # {1: 'hi'} instead
+        # i would've added a list() std entry if the entire codebase didn't fight against that
+        # idea... notably how we expand things like x.pop() to table.remove(x)
+        # and notably how there's no list() constructor
+        # same goes for str()
+        # if a brave PR tackled this issue i would merge it!
+
+        if isinstance(node.slice, ast.Constant) and type(node.slice.value) == int:
+            index = str(node.slice.value+1)
+        else:
+            index = self.visit_all(node.slice, inline=True)
+
         indexs = []
         final = ""
 
@@ -1217,6 +1403,10 @@ for _,i in {} do
     def visit_Tuple(self, node):
         """Visit tuple"""
         elements = [self.visit_all(item, inline=True) for item in node.elts]
+        if self.context.last().get("is_for_target"):
+            self.emit(", ".join(elements))            
+            return
+
         line = "table.freeze({{{}}})".format(", ".join(elements))
         self.emit(line)
 
@@ -1293,9 +1483,12 @@ for _,i in {} do
                 "loop_label_name": continue_label,
             }
         )
-        self.visit_all(node.body)
-        self.context.pop()
+        self.context.push_scope()
 
+        self.visit_all(node.body)
+
+        self.context.pop_scope()
+        self.context.pop()
         self.emit("end")
 
     def visit_SetComp(self, node):
@@ -1358,6 +1551,8 @@ for _,i in {} do
             functions=self.functions,
             currentFunction=self.currentFunctionName,
             generators=self.generators,
+            exports=self.exports,
+            tl_decls=self.tl_decls,
         )
 
         if isinstance(nodes, list):
@@ -1382,6 +1577,9 @@ for _,i in {} do
         self.output.append(value)
 
     def depend(self, value):
+        if value == "kwargs":
+            dependencies.append("dict")
+
         if value != "":
             dependencies.append(value)
 
@@ -1389,4 +1587,7 @@ for _,i in {} do
         return dependencies
 
     def get_exports(self):
-        return exports
+        return self.exports
+    
+    def get_tldecls(self):
+        return self.tl_decls

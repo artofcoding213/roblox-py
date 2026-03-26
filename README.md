@@ -1,27 +1,16 @@
-# Introduction
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-6-orange.svg?style=flat-square)](#contributors-)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
+## roblox-py <i>(artofcoding213's fork)</i>
 
-<div align="center">
+.py -> .luau transpiler\
+this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compilers/roblox-py), notably adding:
+- class inheritence (w/ `super()`, proper `issubclass()` & `isinstance()` impls)
+- `luau()` macro
+- kwargs support! (including `**` operator)
+- proper Rojo support for `client`, `server`, & `shared` import targets (this includes `from [...] import *`)
+- a **LOT** of bug fixes
 
-<figure><img src=".gitbook/assets/Screenshot 2023-07-10 at 12.06.03 AM.png" alt="" width="375"><figcaption></figcaption></figure>
+## original [roblox-py](https://github.com/roblox-compilers/roblox-py) contributors
+(thank you for your amazing work, this project saved me so much time!)
 
-
-## roblox-py
-
-[**Docs**](https://docs.unexex.tech) **|** [**Devforum**]() **|** [**Github**](https://github.com/AsynchronousAI/roblox.pyc) **|** [**Discord**](https://discord.gg/3WCdXhwgfE) **|** [**Playground**](https://coolpro200021.pythonanywhere.com/)
-
-***
-
-Python to Luau Compiler for Roblox.
-
-
-## Sponsors
-<!-- sponsors --><!-- sponsors -->
-<sub>0 sadly</sub>
-
-## Contributors 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->

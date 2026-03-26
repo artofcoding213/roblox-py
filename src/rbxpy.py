@@ -33,6 +33,7 @@ from tokenend import *
 from translator import *
 from unary import *
 from config import Config
+from buildproject import buildproject, watch
 
 
 #### INTERFACE ####
@@ -144,6 +145,13 @@ def main():
             skip = True
         elif arg == "-lua":
             type = 2
+        elif arg == "build":
+            buildproject()
+            return
+        elif arg == "watch":
+            buildproject()
+            watch()
+            return
         elif arg == "-clrtxt":
             # Enable support for ANSI escape sequences
             if os.name == "nt":

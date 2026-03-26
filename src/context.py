@@ -18,10 +18,12 @@ class Context:
                 "globals": SymbolsStack(),  # Not working yet
                 "loop_label_name": "",
                 "docstring": False,
+                'direct_class': False,
             }
         )
 
         self.ctx_stack = [values]
+        self.scope_depth = 0
 
     def last(self):
         """Return actual context state"""
@@ -39,3 +41,23 @@ class Context:
             len(self.ctx_stack) > 1
         ), "Pop context failed. This is a last context in the stack."
         return self.ctx_stack.pop()
+    
+    def exists_in_any_scope(self, var: str):
+        if self.ctx_stack == None:
+            return False
+
+        for ctx in reversed(self.ctx_stack):
+            if ctx['locals'] and ctx['locals'].exists(var):
+                return True
+            
+        return False
+
+    def push_scope(self):
+        self.scope_depth += 1
+        self.ctx_stack[-1].update(direct_class=False)
+
+    def pop_scope(self):
+        self.scope_depth -= 1
+    
+    def is_top_level(self):
+        return self.scope_depth == 0

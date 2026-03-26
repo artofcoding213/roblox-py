@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: roblox-py
+Version: 0.1.0
+Summary: python -> luau (+ pyruntime in luau)
+License-File: LICENSE
+Dynamic: license-file

@@ -36,6 +36,10 @@ class Translator:
         pyRight=False,
     ):
         """Translate python code to lua code"""
+        Translator.reset_dependencies()
+
+        loc_header = ""
+
         global DEPEND
         if not reqfile:
             if isAPI:
@@ -51,11 +55,16 @@ class Translator:
                     sys.exit(1)
 
             visitor = NodeVisitor(config=self.config)
+            visitor.exports = [] # i dunno why this works but it makes sure we don't try to export like a class we removed from the original source code
+            visitor.tl_decls = [] # same issue with this one... weird
 
             if self.show_ast:
                 print(ast.dump(py_ast_tree))
 
             visitor.visit(py_ast_tree)
+
+            for tl in visitor.get_tldecls():
+                loc_header += f"local {tl};"
 
             self.output = visitor.output
 
@@ -63,10 +72,11 @@ class Translator:
             dependencies = list(set(visitor.get_dependencies()))
 
             exports = list(set(visitor.get_exports()))
+            print(str(len(exports)) + " exports")
 
             if fn:
                 dependencies.append("fn")
-            if export and exports != []:
+            if export and len(exports) > 0:
                 FOOTER = "\n\n--> exports\n"
                 FOOTER += 'if not script:IsA("BaseScript") then\n\treturn {\n'
                 for export in exports:
@@ -79,6 +89,7 @@ class Translator:
             dependencies = [
                 "class",
                 "dict",
+                "kwargs",
                 "fn",
                 "complex",
             ]
@@ -96,6 +107,8 @@ class Translator:
                     DEPEND += FN
                 elif depend == "generator":
                     DEPEND += GENERATOR
+                elif depend == "kwargs":
+                    DEPEND += KWARGS
                 else:
                     error(
                         "Auto-generated dependency unhandled '{}', please report this issue on Discord or Github".format(
@@ -126,7 +139,7 @@ end
 
         DEPEND += "\n\n--> code start\n"
 
-        return HEADER + ERRS + DEPEND + CODE + FOOTER
+        return HEADER + ERRS + DEPEND + loc_header + CODE + FOOTER
 
     def to_code(self, code=None, indent=0):
         """Create a lua code from the compiler output"""

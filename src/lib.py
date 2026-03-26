@@ -656,9 +656,6 @@ FN = """\n\nif game then
         return typeof(rawget(fun))	== "function"
     end
     float = tonumber -- float()
-    super = function()
-        error("roblox-pyc does not has a Lua implementation of the function `super`. Use `self` instead")
-    end
     format = function(format, ...) -- format
         local args = {...}
         local num_args = select("#", ...)
@@ -769,16 +766,28 @@ FN = """\n\nif game then
         return obj[name] ~= nil
     end
     isinstance = function (obj, class) -- isinstance
+        local mt = getmetatable(obj)
+        if typeof(obj) == "table" and mt and mt._class then
+            if mt._class == class then
+                return true
+            end
+
+            return issubclass(mt._class, class)
+        end
+
         return type(obj) == class
     end
     issubclass = function (cls, classinfo) -- issubclass
-        local mt = getmetatable(cls)
-        while mt do
-            if mt.__index == classinfo then
+        if typeof(cls) ~= "table" or not getmetatable(cls) then
+            return false
+        end
+
+        for _, b in cls._bases do
+            if b == classinfo then
                 return true
             end
-            mt = getmetatable(mt.__index)
         end
+
         return false
     end
     iter = function (obj) -- iter
@@ -924,57 +933,149 @@ end
         return attributes
     end"""
 
-CLASS = """\n\nfunction class(class_init, bases)
+CLASS = """\n\n
+_G.__super_stack = _G.__super_stack or {}
+
+function class(class_init, bases)
         bases = bases or {}
 
         local c = {}
+        local staticMethods = {}
 
-        for _, base in ipairs(bases) do
-            for k, v in pairs(base) do
-                c[k] = v
+        c._bases = bases
+        c = class_init(c, staticMethods)
+
+        -- this is to allow the below edge case:
+        -- class Base():
+        --     name = "Base"
+        -- class Foo(Base):
+        --     pass
+        -- print(Foo.name)
+        -- so that it prints "Base"
+        for _, b in ipairs(bases) do
+            for k, v in pairs(b.__static) do
+                if not staticMethods[k] then
+                    staticMethods[k] = v
+                end
             end
         end
 
-        c._bases = bases
-
-        c = class_init(c)
-
         local mt = getmetatable(c) or {}
+        mt.__index = function(_, k)
+            if k == '__static' then
+                return staticMethods
+            end
+
+            local method = staticMethods[k];
+            if method then
+                return method;
+            end
+
+            return rawget(c, k);
+        end
+
         mt.__call = function(_, ...)
             local object = {}
 
-            setmetatable(object, {
+     	    local meta = {
+                _class = c,
+                _bases = bases,
+                __add = object.__add__,
+                    __sub = object.__sub__,
+                    __mul = object.__mul__,
+                    __div = object.__div__,
+                    __pow = object.__pow__,
+                __unm = object.__unm,
+                __tostring = object.__str__,
                 __index = function(tbl, idx)
                     local method = c[idx]
                     if typeof(method) == "function" then
                         return function(...)
-                            return c[idx](object, ...) 
+                            table.insert(_G.__super_stack, object)
+                            local res = c[idx](object, ...) 
+                            table.remove(_G.__super_stack)
+
+                            return res
+                        end
+                    end
+
+                    for _, base in ipairs(bases) do
+                        local base_method = base[idx]
+                        if typeof(base_method) == "function" then
+                            return function(...)
+                                table.insert(_G.__super_stack, object)
+                                local res = base_method(object, ...)
+                                table.remove(_G.__super_stack)
+                                return res
+                            end
+                        elseif base_method ~= nil then
+                            return base_method
                         end
                     end
 
                     return method
                 end,
-            })
+	        }
 
-            if typeof(object.__init__) == "function" then
-                object.__init__(...)
+            local lu = {
+                __add__ = "__add",
+                __sub__ = "__sub",
+                __mul__ = "__mul",
+                __div__ = "__div",
+                __pow__ = "__pow",
+                __unm__ = "__unm",
+                __str__ = "__tostring"
+            }
+            for _, b in ipairs(bases) do
+                for k, v in pairs(lu) do
+                    local f = b[k]
+                    if (not f) or meta[v] then
+                        continue
+                    end
+
+                    meta[v] = f
+                end
             end
 
-     	    meta = {
-	  	__add = object.__add__,
-    		__sub = object.__sub__,
-      		__div = object.__div__,
-		__unm = object.__unm,
-	   }
-
-
-            return setmetatable(object, meta)
+            setmetatable(object, meta)
+            if object.__init__ then
+                local override = object.__init__(...)
+                if override ~= nil then
+                    return override
+                end
+            end
+            return object
         end
 
         setmetatable(c, mt)
 
         return c
-    end"""
+    end
+function super()
+    local self = _G.__super_stack[#_G.__super_stack]
+    local mt = getmetatable(self)
+    assert(typeof(mt) == "table" and mt._bases, "super() called outside of class instance")
+
+    local bases = mt._class and mt._class._bases or {}
+    
+    local proxy = {}
+    setmetatable(proxy, {
+        __index = function(_, key)
+            for _, base in ipairs(bases) do
+                local method = base[key]
+                if typeof(method) == "function" then
+                    return function(...)
+                        return method(self, ...)
+                    end
+                elseif method ~= nil then
+                    return method
+                end
+            end
+            return nil
+        end
+    })
+    return proxy
+end"""
 DICT = """\n\nfunction dict(t)
         local result = {}
 
@@ -1121,5 +1222,37 @@ function generatorLoop(name, func, ...)
 			end
 		end
     end
+end
+"""
+
+KWARGS = """\n\n
+_G.__kwargs_stack = _G.__kwargs_stack or {}
+
+local function __call__(f, kwargs, ...)
+    table.insert(_G.__kwargs_stack, kwargs or {})
+    local res = table.pack(f(...))
+    table.remove(_G.__kwargs_stack)
+
+    return unpack(res)
+end
+
+local function __kwargs__()
+    local kws = _G.__kwargs_stack[#_G.__kwargs_stack]
+    return dict(kws)
+end
+
+-- for ** in kwarg functions (i.e. foo(bar='baz', **{'hi': 'ho'}) = {bar='baz', hi='ho'}) with multiple kwargs
+local function __merge__(a, b)
+    local c = {}
+
+    for k, v in a do
+        c[k] = v
+    end
+ 
+    for k, v in b do
+        c[k] = v
+    end
+
+    return c
 end
 """
