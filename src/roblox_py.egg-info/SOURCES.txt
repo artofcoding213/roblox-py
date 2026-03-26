@@ -7,6 +7,7 @@ src/compop.py
 src/config.py
 src/const.py
 src/context.py
+src/dotests.py
 src/lib.py
 src/log.py
 src/loopcounter.py

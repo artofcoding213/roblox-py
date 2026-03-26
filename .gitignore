@@ -1,10 +1,13 @@
 # Python
 *.pyc
+src/__pycache__
+src/roblox_py.egg-info
 
 # Test
 test.py
 test.lua
 test.ipynb
+tests/out
 
 # Build
 /build

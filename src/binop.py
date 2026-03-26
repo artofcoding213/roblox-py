@@ -69,4 +69,9 @@ class BinaryOperationDesc:
             "format": "bit32.bxor({left}, {right})",
             "depend": "",
         },
+        ast.MatMult: {
+            "value": "",
+            "format": "__mat_mul__({left}, {right})",
+            "depend": "maths"
+        }
     }

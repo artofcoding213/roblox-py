@@ -34,6 +34,7 @@ from translator import *
 from unary import *
 from config import Config
 from buildproject import buildproject, watch
+from dotests import dotests
 
 
 #### INTERFACE ####
@@ -151,6 +152,9 @@ def main():
         elif arg == "watch":
             buildproject()
             watch()
+            return
+        elif arg == "test":
+            dotests()
             return
         elif arg == "-clrtxt":
             # Enable support for ANSI escape sequences

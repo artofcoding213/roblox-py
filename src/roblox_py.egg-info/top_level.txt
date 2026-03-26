@@ -4,6 +4,7 @@ compop
 config
 const
 context
+dotests
 lib
 log
 loopcounter

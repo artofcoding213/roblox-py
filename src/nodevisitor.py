@@ -454,7 +454,7 @@ class NodeVisitor(ast.NodeVisitor):
                 _kwargs.append([kw.arg, kwval])
             else:
                 if len(node.keywords) == 1:
-                    _kwargs = kwval
+                    _kwargs = f"__merge__({kwval}, {{}})"
                     did_loadkwargs = True
                     break
                 else:

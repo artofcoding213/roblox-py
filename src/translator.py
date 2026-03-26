@@ -34,6 +34,7 @@ class Translator:
         reqfile=False,
         useRequire=False,
         pyRight=False,
+        isLune=False,
     ):
         """Translate python code to lua code"""
         Translator.reset_dependencies()
@@ -41,6 +42,9 @@ class Translator:
         loc_header = ""
 
         global DEPEND
+        if isLune:
+            DEPEND = ""
+
         if not reqfile:
             if isAPI:
                 py_ast_tree = ast.parse(pycode)
@@ -76,7 +80,7 @@ class Translator:
 
             if fn:
                 dependencies.append("fn")
-            if export and len(exports) > 0:
+            if export and len(exports) > 0 and not isLune:
                 FOOTER = "\n\n--> exports\n"
                 FOOTER += 'if not script:IsA("BaseScript") then\n\treturn {\n'
                 for export in exports:
@@ -109,6 +113,8 @@ class Translator:
                     DEPEND += GENERATOR
                 elif depend == "kwargs":
                     DEPEND += KWARGS
+                elif depend == "maths":
+                    DEPEND += MATHS
                 else:
                     error(
                         "Auto-generated dependency unhandled '{}', please report this issue on Discord or Github".format(
@@ -133,9 +139,10 @@ class Translator:
 end
 """
 
-        for i in lib.libs:
-            if i in CODE:
-                DEPEND += f"\n{i} = py.{i}"
+        if not isLune:
+            for i in lib.libs:
+                if i in CODE:
+                    DEPEND += f"\n{i} = py.{i}"
 
         DEPEND += "\n\n--> code start\n"
 

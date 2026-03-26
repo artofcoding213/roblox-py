@@ -98,6 +98,8 @@ def builddir(path):
             print(f"build {fp}")
             buildfile(fp)
 
+# the stuff below here is AI slop lol i did NOT want to figure out how to implement this
+
 def src_to_out(path: str):
     p = splitpath(path)
     if not p:

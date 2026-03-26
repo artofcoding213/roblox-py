@@ -1,6 +1,27 @@
 # This file includes Lua snippets
 
 #checks needed: 721
+MATHS = """
+ function __mat_mul__(a, b)
+    local a_rows, a_cols = #a, #a[1]
+    local b_rows, b_cols = #b, #b[1]
+    assert(a_cols == b_rows, "incompatible matrix sizes")
+
+    local res = {}
+    for i = 1, a_rows do
+        res[i] = {}
+        for j = 1, b_cols do
+            res[i][j] = 0
+            for k = 1, a_cols do
+                res[i][j] += a[i][k] * b[k][j]
+            end
+        end
+    end
+
+    return res
+end
+"""
+
 COMPLEX = """
 local _cmplxMeta = {
 	__index = function(n, index)
@@ -1184,9 +1205,9 @@ DICT = """\n\nfunction dict(t)
                     key_index = nil
                 end
 
-                key_index, _ = next(result._data, key_index)
+                key_index, v = next(result._data, key_index)
 
-                return key_index            
+                return key_index, v
             end,
         })
 
