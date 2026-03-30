@@ -473,133 +473,9 @@ class NodeVisitor(ast.NodeVisitor):
             name = method + ":" + name
         arguments = [self.visit_all(arg, inline=True) for arg in node.args]
 
-        if isinstance(node.func, ast.Attribute):
-            # Assuming the first argument exists and is what we want to inspect
-            match node.func.attr:
-                case "append":
-                    arg_value = ast.parse(node.args[0])
-                    self.emit(
-                        "table.insert({},{})".format(
-                            parse_expr(node.func.value), parse_expr(arg_value)
-                        )
-                    )
-                    return
-                case "reverse":
-                    self.emit(
-                        "table.sort({},{})".format(
-                            parse_expr(node.func.value),
-                            "(function(a,b) return a > b end)",
-                        )
-                    )
-                    return
-                case "clear":
-                    self.emit("table.clear({})".format(parse_expr(node.func.value)))
-                    return
-                case "pop":
-                    if len(node.args) == 0:
-                        self.emit(f"table.remove({parse_expr(node.func.value)})")
-                        return
-
-                    arg_value = ast.parse(node.args[0])
-                    self.emit(
-                        "table.remove({},{})".format(
-                            parse_expr(node.func.value), (arg_value.value) + 1
-                        )
-                    )
-                    return
-                case "copy":
-                    self.emit("table.clone({})".format(parse_expr(node.func.value)))
-                    return
-                case "insert":
-                    arg_value = ast.parse(node.args[0])
-                    self.emit(
-                        "table.insert({},{},{})".format(
-                            parse_expr(node.func.value),
-                            int(parse_expr(arg_value)) + 1,
-                            parse_expr(ast.parse(node.args[1])),
-                        )
-                    )
-                    return
-                case "remove":
-                    arg_value = ast.parse(node.args[0])
-                    self.emit(
-                        "table.remove({},{})".format(
-                            parse_expr(node.func.value), parse_expr(arg_value)
-                        )
-                    )
-                    return
-                case "sort":
-                    kwargs = {}
-                    for keyword in node.keywords:
-                        kwargs[keyword.arg] = self.visit_all(keyword.value, inline=True)
-                    if len(kwargs) == 1 and kwargs.get("reverse", False):
-                        self.emit(
-                            "table.sort({},{})".format(
-                                parse_expr(node.func.value),
-                                "(function(a,b) return a > b end)",
-                            )
-                        )
-                        return
-                    elif len(kwargs) == 1 and kwargs.get("key", False):
-                        error("The key kwarg is not supported.")
-                    else:
-                        error("The key kwarg is not supported.")
-
-                case "count":
-                    arg = node.args[0]
-
-                    self.emit("""
-(function(tbl, val)
-	local result = 0
-	for _,v in tbl do
-		if v == val then
-			result += 1
-		end
-	end
-	return result
-end)({}, {})
-""".format(parse_expr(node.func.value),parse_expr(arg)))
-                    return
-
-                case "index":
-                    args = 0
-                    for _ in node.args:
-                        args += 1
-
-                    if args == 1:
-                       self.emit("table.find({},{})".format(
-                           parse_expr(node.func.value),parse_expr(node.args[0])
-                       ))
-                       return
-                    elif args == 2:
-                        self.emit("table.find({},{},{})".format(parse_expr(node.func.value),parse_expr(node.args[0]),parse_expr(node.args[1])))
-                        return
-                    else:
-                        self.emit("""
-(function(tbl, val, start, stop)
-	for index = start, stop do
-		if tbl[index] == val then
-			return index
-		end
-	end
-	return nil
-end)({}, {}, {}, {})""".format(parse_expr(node.func.value),parse_expr(node.args[0]),parse_expr(node.args[1]),parse_expr(node.args[2])))
-                    return
-                        
-
-                case "extend":
-                    arg_value = ast.parse(node.args[0])
-                    self.emit(
-                        """
-for _,i in {} do
-    table.insert({},i)
-
-""".format(parse_expr(arg_value), parse_expr(node.func.value))
-                    )
-                    return
-
         arg_str = ", ".join(arguments)
         if len(arguments) > 0:
+            self.depend("dict")
             arg_str = ", " + arg_str
 
         self.emit(line.format(name=name, arguments=arg_str, kwargs=_kwargs))
@@ -700,13 +576,20 @@ for _,i in {} do
                     leftval = self.variables.get(x)
                 ##IN CHECK##
                 if rightval == 'List':
-                    line += f"{op_str}(table.find({right}, {left}) ~= nil)"
+                    self.depend("dict")
+                    line += f"{op_str}({right}.find({left}) ~= nil)"
                 elif rightval == 'Str':
                     line += f"{op_str}(string.find({right}, {left}, 1, true) ~= nil)"
                 else:
                     line += f"{op_str}({right}[{left}] ~= nil)"
             else:
-                line += f"{values['left']} {values['operation']} {values['right']}"
+                lop = values['operation']
+                if isinstance(lop, list):
+                    self.depend("overloads")
+                    line += f"{lop[0]}({values['left']}, {values['right']})"
+                else:
+                    line += f"{values['left']} {lop} {values['right']}"
+
 
             if i < len(node.ops) - 1:
                 line += " and "
@@ -962,17 +845,26 @@ for _,i in {} do
                 line = 'for {target} in string.gmatch({iter},".") do'
             else:
                 line = "for {target} in {iter} do"
+
+        matches = re.findall(r"__call__\(\s*([^,]+)", values["iter"])
+        is_gen = False
+        real_func_name = ""
+
+        if matches:
+            real_func_name = matches[-1]
+            is_gen = real_func_name in self.generators
+            print(real_func_name)
         
-        isAGenerator = re.sub(r"\([^)]*\)", "", values["iter"]) in self.generators
-        if isAGenerator:
-            funcName = re.sub(r"\([^)]*\)", "", values["iter"])
-            args = re.search(r"\(([^)]*)\)", values["iter"]).group(1)
-            if args == "":
-                args = "nil"
+        if is_gen:
+            # to support nested calls (i.e. enumerate(mygen()))
+            # even though it wouldnt modify it at all lol
+            f = f"function() {values["iter"]} end"
 
-            line = "generatorLoop('"+funcName+"', "+funcName+", "+args+")(function({target})"
+            line = f"generatorLoop('{real_func_name}', {f})(function({target})"
+            self.emit(line)
+        else:
+            self.emit(line.format(**values))
 
-        self.emit(line.format(**values))
 
         continue_label = LoopCounter.get_next()
         self.context.push(
@@ -987,11 +879,10 @@ for _,i in {} do
         self.context.pop_scope()
         self.context.pop()
         
-        if isAGenerator:
+        if is_gen:
             self.emit("end)")
         else:
             self.emit("end")
-
 
     def visit_Global(self, node):
         """Visit globals"""
@@ -1212,8 +1103,10 @@ for _,i in {} do
 
     def visit_List(self, node):
         """Visit list"""
+        self.depend("dict")
+
         elements = [self.visit_all(item, inline=True) for item in node.elts]
-        line = "{{{}}}".format(", ".join(elements))
+        line = "list({{{}}})".format(", ".join(elements))
         self.emit(line)
 
     def visit_GeneratorExp(self, node):
@@ -1249,8 +1142,9 @@ for _,i in {} do
 
     def visit_ListComp(self, node):
         """Visit list comprehension"""
+        self.depend("dict")
         self.emit("(function()")
-        self.emit("local result = {}")
+        self.emit("local result = list({})")
 
         ends_count = 0
 
@@ -1277,12 +1171,8 @@ for _,i in {} do
                 self.emit(line)
                 ends_count += 1
 
-        # list comprehensions are a very well-known and envied feature of python,
-        # one of the first things you tackle when compiling/transpiling python
-        # i'm not sure why there were so many issues, but it was clear it's never been tested
-
         line = (
-            "table.insert(result,"
+            "result.append("
             + str(self.visit_all(node.elt, inline=True))
             + ")"
         )
@@ -1351,6 +1241,9 @@ for _,i in {} do
 
         index = ''
 
+        #! hooray! i added it! this still does go through the issue if you want to see it in depth
+        #! the way we did this was just by setting an __index & __newindex metatable on lists
+
         # note: this may break some subscripts, notably this example:
         # d = {}
         # d[0] = 'hi'
@@ -1361,13 +1254,8 @@ for _,i in {} do
         # idea... notably how we expand things like x.pop() to table.remove(x)
         # and notably how there's no list() constructor
         # same goes for str()
-        # if a brave PR tackled this issue i would merge it!
 
-        if isinstance(node.slice, ast.Constant) and type(node.slice.value) == int:
-            index = str(node.slice.value+1)
-        else:
-            index = self.visit_all(node.slice, inline=True)
-
+        index = self.visit_all(node.slice, inline=True)
         indexs = []
         final = ""
 
@@ -1407,7 +1295,9 @@ for _,i in {} do
             self.emit(", ".join(elements))            
             return
 
-        line = "table.freeze({{{}}})".format(", ".join(elements))
+        self.depend("dict")
+        line = "list(table.freeze({{{}}}))".format(", ".join(elements))
+
         self.emit(line)
 
     def visit_UnaryOp(self, node):
@@ -1578,9 +1468,13 @@ for _,i in {} do
 
     def depend(self, value):
         if value == "kwargs":
-            dependencies.append("dict")
+            self.depend("dict")
+        elif value == "maths":
+            self.depend("dict")
+        elif value == "fn":
+            self.depend("kwargs")
 
-        if value != "":
+        if value != "" and (value not in dependencies):
             dependencies.append(value)
 
     def get_dependencies(self):

@@ -14,6 +14,7 @@ src/loopcounter.py
 src/luau.py
 src/nodevisitor.py
 src/rbxpy.py
+src/repl.py
 src/symbols.py
 src/tokenend.py
 src/translator.py

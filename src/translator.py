@@ -40,10 +40,12 @@ class Translator:
         Translator.reset_dependencies()
 
         loc_header = ""
+        lune_header = ""
 
         global DEPEND
         if isLune:
             DEPEND = ""
+            lune_header = "-- lune header:\nlocal task = require('@lune/task')\n--end\n"
 
         if not reqfile:
             if isAPI:
@@ -70,13 +72,14 @@ class Translator:
             for tl in visitor.get_tldecls():
                 loc_header += f"local {tl};"
 
+            loc_header += "\n"
+
             self.output = visitor.output
 
             # Remove duplicates from dependencies (list)
             dependencies = list(set(visitor.get_dependencies()))
 
             exports = list(set(visitor.get_exports()))
-            print(str(len(exports)) + " exports")
 
             if fn:
                 dependencies.append("fn")
@@ -100,7 +103,6 @@ class Translator:
             DEPEND = ""
         if not useRequire:
             for depend in dependencies:
-                # set
                 if depend == "complex":
                     DEPEND += COMPLEX
                 elif depend == "dict":
@@ -115,6 +117,8 @@ class Translator:
                     DEPEND += KWARGS
                 elif depend == "maths":
                     DEPEND += MATHS
+                elif depend == "overloads":
+                    DEPEND += OVERLOADS
                 else:
                     error(
                         "Auto-generated dependency unhandled '{}', please report this issue on Discord or Github".format(
@@ -146,7 +150,7 @@ end
 
         DEPEND += "\n\n--> code start\n"
 
-        return HEADER + ERRS + DEPEND + loc_header + CODE + FOOTER
+        return lune_header + HEADER + ERRS + DEPEND + loc_header + CODE + FOOTER
 
     def to_code(self, code=None, indent=0):
         """Create a lua code from the compiler output"""

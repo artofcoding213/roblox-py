@@ -18,7 +18,7 @@ def dotests():
             useRequire = False
             isLune = True
 
-            translator = Translator(Config(".robloxpy.json"), show_ast=True)
+            translator = Translator(Config(".robloxpy.json"), show_ast=False)
             luau = translator.translate(
                 py, include_std, False, export, False, useRequire, None,
                 isLune

@@ -11,6 +11,7 @@ loopcounter
 luau
 nodevisitor
 rbxpy
+repl
 symbols
 tokenend
 translator

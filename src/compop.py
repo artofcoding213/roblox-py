@@ -7,7 +7,7 @@ class CompareOperationDesc:
     """Compare operation description"""
 
     OPERATION = {
-        ast.Eq: "==",
+        ast.Eq: ["__eq__"],
         ast.NotEq: "~=",
         ast.Lt: "<",
         ast.LtE: "<=",

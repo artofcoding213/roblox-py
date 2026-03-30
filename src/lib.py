@@ -3,17 +3,17 @@
 #checks needed: 721
 MATHS = """
  function __mat_mul__(a, b)
-    local a_rows, a_cols = #a, #a[1]
-    local b_rows, b_cols = #b, #b[1]
+    local a_rows, a_cols = #a, #a[0]
+    local b_rows, b_cols = #b, #b[0]
     assert(a_cols == b_rows, "incompatible matrix sizes")
 
-    local res = {}
+    local res = list()
     for i = 1, a_rows do
-        res[i] = {}
+        res[i-1] = list()
         for j = 1, b_cols do
-            res[i][j] = 0
+            res[i-1][j-1] = 0
             for k = 1, a_cols do
-                res[i][j] += a[i][k] * b[k][j]
+                res[i-1][j-1] += a[i-1][k-1] * b[k-1][j-1]
             end
         end
     end
@@ -642,13 +642,11 @@ FN = """\n\nif game then
         end
         return minValue
     end
-    reversed = function(seq) -- reversed()
-        local reversedSeq = {}
-        local length = #seq
-        for i = length, 1, -1 do
-            reversedSeq[length - i + 1] = seq[i]
-        end
-        return reversedSeq
+    reversed = function(xs, ...) -- reversed()
+        local tmp = xs.copy()
+        __call__(tmp.reverse, __kwargs__(), ...)
+
+        return tmp
     end
     split = function(str, sep) -- split
         local substrings = {}
@@ -868,15 +866,16 @@ FN = """\n\nif game then
     end
 
     enumerate = function (t)
-	local i = 0
-	return function()
-		i = i + 1
-		local value = t(nil, i)
-		if value ~= nil then
-			return i, value
-		end
-	end
-end
+        local i = 0
+        return function()
+            i += 1
+
+            local value = t(nil, i)
+            if value ~= nil then
+                return i-1, value
+            end
+        end
+    end
 
     bytearray = function (arg) -- bytearray
         if type(arg) == "string" then
@@ -928,23 +927,11 @@ end
     repr = function (object) -- repr
         return tostring(object)
     end
-    sorted = function (iterable, cmp, key, reverse) -- sorted
-        local sortedTable = {}
-        for key, value in pairs(iterable) do
-            table.insert(sortedTable, { key = key, value = value })
-        end
-        table.sort(sortedTable, function(a, b)
-            -- Compare logic based on cmp, key, reverse parameters
-            return a.key < b.key
-        end)
-        local i = 0
-        return function()
-            i = i + 1
-            local entry = sortedTable[i]
-            if entry then
-                return entry.key, entry.value
-            end
-        end
+    sorted = function (xs, ...) -- sorted
+        local tmp = xs.copy()
+        __call__(tmp.sort, __kwargs__(), ...)
+
+        return tmp
     end
     vars = function (object) -- vars
         local attributes = {}
@@ -1037,6 +1024,13 @@ function class(class_init, bases)
                     return method
                 end,
 	        }
+
+            for k, v in pairs(object) do
+                if #k > 3 and k:sub(1, 2) == "__" and not meta[k] then
+                    -- to support things like __eq__
+                    meta[k] = v
+                end
+            end
 
             local lu = {
                 __add__ = "__add",
@@ -1212,7 +1206,179 @@ DICT = """\n\nfunction dict(t)
         })
 
         return result
-    end"""
+end
+
+if not _G._list_mt then
+    _G._list_mt = {}
+end
+
+function list(raw)
+    raw = raw or {}
+
+    local methods = {}
+    local mt = getmetatable(raw) or {}
+
+    function methods.copy()
+        return list(table.clone(raw))
+    end
+
+    function methods.sort(...)
+        mt:__sort__(...)
+    end
+
+    function methods.reverse(...)
+        mt:__reverse__()
+    end
+
+    function methods.append(x)
+        table.insert(raw, x)
+    end
+
+    function methods.pop()
+        return table.remove(raw)
+    end
+
+    function methods.clear()
+        table.clear(raw)
+    end
+
+    function methods.insert(y, z)
+        table.insert(raw, y+1, z)
+    end
+
+    function methods.remove(i)
+        table.remove(raw, i)
+    end
+
+    function methods.sort(key, reverse)
+        local kwargs = __kwargs__()
+        key = kwargs.get('key') or key
+        reverse = kwargs.get('reverse') or reverse
+
+        if key == nil then
+            key = function(x)
+                return x
+            end
+        end
+
+        local function ascending(a, b)
+            return key(a) > key(b)
+        end
+
+        local function descending(a, b)
+            return key(a) < key(b)
+        end
+
+        local f = ascending
+        if reverse then
+            f = descending
+        end
+
+        table.sort(raw, f)
+    end
+
+    function methods.find(x, y)
+        if y ~= nil then
+            return table.find(raw, x, y)
+        end
+
+        return table.find(raw, x)
+    end
+
+    function methods.reverse()
+        for i = 1, math.floor(#raw / 2) do
+            raw[i], raw[#raw-i + 1] = raw[#raw-i + 1], raw[i]
+        end
+    end
+
+    function methods.extend(xs)
+        for _, x in xs do
+            table.insert(raw, x)
+        end
+    end
+
+    mt._is_list = true
+    mt._data = raw
+
+    function mt:__len()
+        return #raw
+    end
+
+    function mt:__tostring()
+        local str = '['
+
+        for i, v in ipairs(raw) do
+            if typeof(v) == 'string' then
+                v = `'{v}'`
+            end
+
+            str ..= tostring(v)
+
+            if i < #raw then
+                str ..= ', '
+            end
+        end
+
+        return str..']'
+    end
+
+    function mt:__index(i)
+        if i == '_is_list' then
+            return true
+        end
+
+        if methods[i] ~= nil then
+            return methods[i]
+        end
+
+        return raw[i+1]
+    end
+
+    function mt:__eq__(x)
+        assert(typeof(x) == "table" and x._is_list)
+
+        if #raw ~= #x then
+            return false
+        end
+
+        for i = 0, #raw-1 do
+            if raw[i+1] ~= x[i] then
+                return false
+            end
+        end
+
+        return true
+    end
+
+    function mt:__newindex(i, v)
+        raw[i+1] = v
+    end
+
+    function mt:__iter()
+        local function iter(state, i)
+            i += 1
+            local v = state[i + 1]
+            if v ~= nil then
+                return i, v
+            end
+        end
+
+        return iter, raw, -1
+    end
+
+    local k, v = nil, nil
+    function mt:__call(_, i)
+        if i == nil and k ~= nil then
+            k = nil
+        end
+
+        k, v = next(raw, k)
+        return v
+    end
+
+    return setmetatable({}, mt)
+end
+"""
 
 GENERATOR = """\n\nlocal __PY_GENERATORS = {}
 function yieldGenerator(name, value)
@@ -1221,8 +1387,7 @@ function yieldGenerator(name, value)
     end
     table.insert(__PY_GENERATORS[name], value)
 end
-function generatorLoop(name, func, ...)
-    local args = {...}
+function generatorLoop(name, func)
     if not __PY_GENERATORS[name] then
         __PY_GENERATORS[name] = {}
     end
@@ -1230,14 +1395,19 @@ function generatorLoop(name, func, ...)
         local DONE = false
 		local currentSize = 0
 		task.spawn(function()
-			func(unpack(args))
+			func()
+            table.insert(__PY_GENERATORS[name], "__END")
 		end)
-		while  task.wait() do
+		while (not DONE) and task.wait() do
 			if #__PY_GENERATORS[name] > currentSize then
 				for i = currentSize + 1, #__PY_GENERATORS[name] do
-					if __PY_GENERATORS[name][i] == "__END" then break end
+					if __PY_GENERATORS[name][i] == "__END" then
+                        DONE = true
+                        break
+                    end
 					
-					loopFunc(__PY_GENERATORS[name][i])
+					local v = __PY_GENERATORS[name][i]
+					loopFunc(i-1, v)
 				end
 				currentSize = #__PY_GENERATORS[name]
 			end
@@ -1246,10 +1416,24 @@ function generatorLoop(name, func, ...)
 end
 """
 
+OVERLOADS = """\n\n
+
+function __eq__(x, y)
+    if typeof(x) == "table" and typeof(y) == "table" and getmetatable(x)
+        and getmetatable(x).__eq__ ~= nil
+    then
+        return getmetatable(x).__eq__(x, y)
+    end
+
+    return x == y
+end
+
+"""
+
 KWARGS = """\n\n
 _G.__kwargs_stack = _G.__kwargs_stack or {}
 
-local function __call__(f, kwargs, ...)
+function __call__(f, kwargs, ...)
     table.insert(_G.__kwargs_stack, kwargs or {})
     local res = table.pack(f(...))
     table.remove(_G.__kwargs_stack)
@@ -1257,13 +1441,16 @@ local function __call__(f, kwargs, ...)
     return unpack(res)
 end
 
-local function __kwargs__()
-    local kws = _G.__kwargs_stack[#_G.__kwargs_stack]
-    return dict(kws)
+function __kwargs_raw__()
+    return _G.__kwargs_stack[#_G.__kwargs_stack]
+end
+
+function __kwargs__()
+    return dict(__kwargs_raw__())
 end
 
 -- for ** in kwarg functions (i.e. foo(bar='baz', **{'hi': 'ho'}) = {bar='baz', hi='ho'}) with multiple kwargs
-local function __merge__(a, b)
+function __merge__(a, b)
     local c = {}
 
     for k, v in a do

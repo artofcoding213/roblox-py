@@ -35,7 +35,7 @@ from unary import *
 from config import Config
 from buildproject import buildproject, watch
 from dotests import dotests
-
+from repl import repl
 
 #### INTERFACE ####
 from log import error
@@ -148,6 +148,9 @@ def main():
             type = 2
         elif arg == "build":
             buildproject()
+            return
+        elif arg == "repl":
+            repl()
             return
         elif arg == "watch":
             buildproject()
