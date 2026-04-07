@@ -35,6 +35,7 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 fix:
 - some test cases were throwing an exception inside of a `try`...`except` block,
 we just print an error message now, unfortunately it will still say the test passed
+- lune environments not generating exports
 
 add:
 - `isinstance()` support for `list` & `dict`
@@ -49,6 +50,16 @@ def f():
     return 1, 2, 3  
 x, y, z = f()
 m, n = [1, 2]
+```
+- `import`s now export their variables, i.e.:
+```py
+foo.py
+from examplepkg import foo, bar
+```
+```py
+other.py
+# this works now!
+from foo.py import foo, bar
 ```
 
 ## using lune

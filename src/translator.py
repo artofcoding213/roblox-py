@@ -83,9 +83,9 @@ class Translator:
 
             if fn:
                 dependencies.append("fn")
-            if export and len(exports) > 0 and not isLune:
+            if export and len(exports) > 0:
                 FOOTER = "\n\n--> exports\n"
-                FOOTER += 'if not script:IsA("BaseScript") then\n\treturn {\n'
+                FOOTER += 'if (script ~= nil) and (not script:IsA("BaseScript")) then\n\treturn {\n'
                 for export in exports:
                     FOOTER += f'\t\t["{export}"] = {export},\n'
                 FOOTER += "\t}\nend"

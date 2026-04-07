@@ -987,6 +987,9 @@ class NodeVisitor(ast.NodeVisitor):
                 if not node.name.startswith("game."):
                     values["name"] = node.name
 
+        if ('asname' in values) and self.context.is_top_level():
+            self.exports.append(values['asname'])
+
         if node.name in lib.libs:
             self.emit(getattr(libs, node.name))
             return
@@ -1017,6 +1020,11 @@ class NodeVisitor(ast.NodeVisitor):
 
                 vars[name.name] = loc
                 self.emit(f"local {loc}")
+                print("export")
+                if self.context.is_top_level():
+                    self.exports.append(loc)
+                else:
+                    print("nope")
 
             self.emit("do")
             self.emit(xs)
