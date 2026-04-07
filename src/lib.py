@@ -786,13 +786,21 @@ FN = """\n\nif game then
     end
     isinstance = function (obj, class) -- isinstance
         local mt = getmetatable(obj)
+        if class and typeof(class) == 'table' then
+            if class._is_list_class then
+                return obj._is_list == true
+            elseif class._is_dict_class then
+                return obj._is_dict == true
+            end
+        end
+
         if typeof(obj) == "table" and mt and mt._class then
             if mt._class == class then
                 return true
             end
 
             return issubclass(mt._class, class)
-        end
+        end 
 
         return type(obj) == class
     end
@@ -1091,7 +1099,10 @@ function super()
     })
     return proxy
 end"""
-DICT = """\n\nfunction dict(t)
+DICT = """\n\n
+dict = {}
+
+function dict_impl(t)
         local result = {}
 
         result._is_dict = true
@@ -1208,11 +1219,19 @@ DICT = """\n\nfunction dict(t)
         return result
 end
 
+dict = setmetatable({_is_dict_class=true}, {
+    __call = function(self, ...)
+        return dict_impl(...)
+    end,  
+})
+
 if not _G._list_mt then
     _G._list_mt = {}
 end
 
-function list(raw)
+list = {}
+
+function list_impl(raw)
     raw = raw or {}
 
     local methods = {}
@@ -1232,6 +1251,12 @@ function list(raw)
 
     function methods.append(x)
         table.insert(raw, x)
+    end
+
+    function methods.extend(xs)
+        for _, x in xs do
+            table.insert(raw, x)
+        end
     end
 
     function methods.pop()
@@ -1382,6 +1407,12 @@ function list(raw)
 
     return setmetatable({}, mt)
 end
+
+list = setmetatable({_is_list_class=true}, {
+    __call = function(self, ...)
+        return list_impl(...)
+    end,
+})
 
 function __unpack__(exp, ...)
     local args = {...}

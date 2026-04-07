@@ -1,3 +1,6 @@
+assert isinstance([1, 2, 3], list)
+assert isinstance({'foo': 'bar'}, dict)
+
 class a():
     descend_a = True
 

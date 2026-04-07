@@ -30,21 +30,26 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 </table>
 
 ## latest commit
-> 3/29/26 (MM/DD/YY)
+> 4/7/26 (MM/DD/YY)
 
 fix:
-- generators
-- `sorted()` & `reversed()` just expand to `.copy()` & their corresponding method instead
-of rewriting the implementation
+- some test cases were throwing an exception inside of a `try`...`except` block,
+we just print an error message now, unfortunately it will still say the test passed
 
 add:
-- `list()` support & its methods (removed overloads i.e. .pop(), includes 0-based indexing)
-  - this means printing/`str`'ing a list wont just print a table addres
-- `==` is now overloaded to `__eq__` metamethod (overloads in `lib.py`)
-  - will add more of these soon..?
-- repl
-  - note: this requires `lune` to be installed (see [using lune](#using-lune))
-- more readme stuff
+- `isinstance()` support for `list` & `dict`
+- `for` unpacking, i.e.:
+```py
+for [x, y] in [[1, 2], [3, 4]]:
+    pass
+```
+- `list`/`tuple` unpacking, i.e.:
+```py
+def f():
+    return 1, 2, 3  
+x, y, z = f()
+m, n = [1, 2]
+```
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:
