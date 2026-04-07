@@ -866,7 +866,6 @@ class NodeVisitor(ast.NodeVisitor):
         if matches:
             real_func_name = matches[-1]
             is_gen = real_func_name in self.generators
-            print(real_func_name)
         
         if is_gen:
             # to support nested calls (i.e. enumerate(mygen()))
@@ -1020,11 +1019,8 @@ class NodeVisitor(ast.NodeVisitor):
 
                 vars[name.name] = loc
                 self.emit(f"local {loc}")
-                print("export")
                 if self.context.is_top_level():
                     self.exports.append(loc)
-                else:
-                    print("nope")
 
             self.emit("do")
             self.emit(xs)
