@@ -1297,6 +1297,10 @@ function list(raw)
         end
     end
 
+    function methods.raw()
+        return raw
+    end
+
     mt._is_list = true
     mt._data = raw
 
@@ -1377,6 +1381,19 @@ function list(raw)
     end
 
     return setmetatable({}, mt)
+end
+
+function __unpack__(exp, ...)
+    local args = {...}
+
+    if (#args == 1) and (typeof(args[1]) == 'table') and (args[1]._is_list == true) then
+        assert(#args[1] == exp, `expected {exp} values to unpack, got {#args[1]}`)
+
+        return unpack(args[1].raw())
+    end
+
+    assert(#args == exp, `expected {exp} values to unpack, got {#args}`)
+    return ...
 end
 """
 

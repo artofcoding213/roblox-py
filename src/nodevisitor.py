@@ -67,8 +67,14 @@ class NodeVisitor(ast.NodeVisitor):
 
                 self.variables[var_name] = var_type
 
-        target = self.visit_all(node.targets[0], inline=True)
-        value = self.visit_all(node.value, inline=True)
+        if isinstance(node.targets[0], ast.Tuple):
+            target = ', '.join([self.visit_all(x, inline=True) for x in node.targets[0].elts])
+            self.depend('dict')
+            value = f'__unpack__({len(node.targets[0].elts)}, {self.visit_all(node.value, inline=True)})'
+        else:
+            target = self.visit_all(node.targets[0], inline=True)
+            value = self.visit_all(node.value, inline=True)
+        
         if "," in target:
             t2 = target.replace(" ", "").split(",")
             i = 0
@@ -822,11 +828,18 @@ class NodeVisitor(ast.NodeVisitor):
     def visit_For(self, node):
         """Visit for loop"""
         self.context.push({ "is_for_target": True })
+        target_sfx = ""
+
         if isinstance(node.target, ast.Name):
             target = f"_, {node.target.id}"
+        elif isinstance(node.target, ast.List): # list unpacking (i.e. for [x, y] in [[1, 2], [3, 4]]) but not nested
+            target = f"_, __to_unpack"
+            for i, e in enumerate(node.target.elts):
+                assert isinstance(e, ast.Name)
+                target_sfx += f'local {e.id} = __to_unpack[{i}]'
+                target_sfx += '\n'
         else:    
             target = self.visit_all(node.target, inline=True)
-
 
         self.context.pop()
 
@@ -873,6 +886,8 @@ class NodeVisitor(ast.NodeVisitor):
             }
         )
         self.context.push_scope()
+        if target_sfx:
+            self.emit(target_sfx)
 
         self.visit_all(node.body)
 

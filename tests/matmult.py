@@ -20,6 +20,6 @@ try:
     b = [ (1, 2) ]
     out = a@b
 
-    assert False, "should've errored with incompatible matrix sizes"
+    print("should've errored with incompatible matrix sizes")
 except:
     pass

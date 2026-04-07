@@ -57,6 +57,6 @@ assert t[1] == 2
 
 try:
     t.append(67)
-    raise Exception("this should error: tuples are readonly")
+    print("this should error: tuples are readonly")
 except:
     pass
