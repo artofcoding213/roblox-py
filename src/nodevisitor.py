@@ -330,6 +330,9 @@ class NodeVisitor(ast.NodeVisitor):
         ):
             values["object"] = "({})".format(values["object"])
 
+        if values['object'] == 'str':
+            line = 'string.{attr}'
+
         self.emit(line.format(**values))
 
     def visit_BinOp(self, node):
@@ -1258,6 +1261,27 @@ class NodeVisitor(ast.NodeVisitor):
         """Visit subscript"""
         line = "{name}{indexs}"
 
+        if isinstance(node.slice, ast.Slice):
+            line = "__slicearr({arr}, {start}, {stop}, {step})"
+            values = {
+                'arr': self.visit_all(node.value, inline=True),
+                'start': '0',
+                'stop': '-1',
+                'step': '1',
+            }
+
+            if node.slice.lower:
+                values['start'] = self.visit_all(node.slice.lower, inline=True)
+
+            if node.slice.upper:
+                values['stop'] = self.visit_all(node.slice.upper, inline=True)
+
+            if node.slice.step:
+                values['step'] = self.visit_all(node.slice.step, inline=True)
+
+            self.emit(line.format(**values))
+            return
+
         index = ''
 
         #! hooray! i added it! this still does go through the issue if you want to see it in depth
@@ -1302,6 +1326,7 @@ class NodeVisitor(ast.NodeVisitor):
             "name": self.visit_all(node.value, inline=True),
             "indexs": final,
         }
+
         if values["name"] in reserves:
             error(f"'{values['name']}'is a reserved Luau keyword.")
 

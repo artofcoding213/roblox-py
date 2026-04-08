@@ -30,36 +30,16 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 </table>
 
 ## latest commit
-> 4/7/26 (MM/DD/YY)
+> 4/8/26 (MM/DD/YY)
 
 fix:
-- some test cases were throwing an exception inside of a `try`...`except` block,
-we just print an error message now, unfortunately it will still say the test passed
-- lune environments not generating exports
+- `__init__.client.py` (or .server.py) files not showing up as `init.client.luau` (or .server.luau) in `watch` mode
 
 add:
-- `isinstance()` support for `list` & `dict`
-- `for` unpacking, i.e.:
+- proper array/string slicing, i.e.:
 ```py
-for [x, y] in [[1, 2], [3, 4]]:
-    pass
-```
-- `list`/`tuple` unpacking, i.e.:
-```py
-def f():
-    return 1, 2, 3  
-x, y, z = f()
-m, n = [1, 2]
-```
-- `import`s now export their variables, i.e.:
-```py
-foo.py
-from examplepkg import foo, bar
-```
-```py
-other.py
-# this works now!
-from foo.py import foo, bar
+'hi'[0:1] # 'h'
+[1, 2, 3][-2:-1] # [3]
 ```
 
 ## using lune
@@ -103,20 +83,5 @@ this is the only superset of `build` that can delete files in `out/`, but only i
 subsequently delete a file in `src/`
 
 in a nutshell, it just calls `roblox-py build` every time you change something in `src/`
-
-## complaints
-(with the original repo, i've fixed some of these)
-
-- ai slop in `lib.py`
-  - (the entire structure of it was terrible, writing luau in green text with no linter is hard, should've split every dependency into .luau files)
-- inconsistent naming conventions (some locals use pascal, others use snake case?)
-- sometimes uses `match`, other times uses `if .. elif .. elif ..`
-- global spam (state should be in the classes!)
-- straight up broken features (i.e. list comprehension)
-- lack of comments (though i do the same thing too lol)
-- lack of class support (calling `super()` straight up errors)
-- no test cases? (how can there be bug fixers if there area no tests)
-- no python library setup? (how can anyone use this from the command-line)
-- no 0-based indexing (seriously, even a visit_Subscript +1 on numbers would've been enough, that's what i did as a temporary fix)
 
 </div>

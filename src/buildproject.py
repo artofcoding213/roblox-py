@@ -78,8 +78,13 @@ def _buildfile(path: str):
 
     name = p[-1]
     base, ext = os.path.splitext(name)
-    if base == "__init__":
-        base = "init"
+    match base:
+        case "__init__":
+            base = "init"
+        case "__init__.client":
+            base = "init.client"
+        case "__init__.server":
+            base = "init.server"
 
     p[-1] = base + ".luau"
 

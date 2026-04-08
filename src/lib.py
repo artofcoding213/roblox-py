@@ -555,6 +555,7 @@ libs = [
     "bool",
     "divmod",
     "slice",
+    '__slicearr',
     "anext",
     "ascii",
     "dir",
@@ -753,6 +754,36 @@ FN = """\n\nif game then
         for i = start, stop - 1, step do
             table.insert(sliced, seq[i])
         end
+        return sliced
+    end
+    __slicearr = function (arr, start, stop, step)
+        local arr_len = #arr
+
+        if start < 0 then
+            start += arr_len+1
+        end
+
+        if stop < 0 then
+            stop += arr_len+1
+        end
+
+        local sliced
+        if typeof(arr) == 'string' then
+            sliced = ''
+        else
+            sliced = arr.copy()
+            sliced.clear()
+        end
+
+        for i = start, stop-1, step do
+            if typeof(arr) == 'string' then
+                sliced ..= arr:sub(i+1, i+1)
+                continue
+            end
+
+            sliced.append(arr[i])
+        end
+
         return sliced
     end
     anext = function (iterator) -- anext
