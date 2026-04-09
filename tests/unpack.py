@@ -15,3 +15,12 @@ try:
     print("this should error: not unpacking enough values")
 except:
     pass
+
+# test of for loop unpacking
+nested = [[1, 2], [3, 4]]
+
+for i, [a, b] in enumerate(nested):
+    if i == 0:
+        assert a == 1 and b == 2
+    else:
+        assert a == 3 and b == 4

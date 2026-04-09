@@ -37,6 +37,7 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 fix:
 - `__init__.client.py` (or .server.py) files not showing up as `init.client.luau` (or .server.luau) in `watch` mode
 - `issubclass()` not working on non-class values
+- `for` loop unpacking not working for tuples (i.e. `for i, [a, b] in enumerate(nested)`)
 
 add:
 - proper array/string slicing, i.e.:

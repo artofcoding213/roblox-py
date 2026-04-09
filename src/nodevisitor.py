@@ -844,6 +844,23 @@ class NodeVisitor(ast.NodeVisitor):
                 assert isinstance(e, ast.Name)
                 target_sfx += f'local {e.id} = __to_unpack[{i}]'
                 target_sfx += '\n'
+        elif isinstance(node.target, ast.Tuple): # list unpacking with elts (i.e. for i, [x, y] in enumerate([[1,2], [3,4]]))
+            targets = []
+            unpack_num = 0
+
+            for e in node.target.elts:
+                if isinstance(e, ast.List):
+                    unpack_name = f'__to_unpack{unpack_num}'
+                    targets.append(unpack_name)
+                    unpack_num += 1
+
+                    for i, unpackee in enumerate(e.elts):
+                        assert isinstance(unpackee, ast.Name)
+                        target_sfx += f'local {unpackee.id} = {unpack_name}[{i}]\n'
+                else:
+                    targets.append(self.visit_all(e, inline=True))
+
+            target = ', '.join(targets)
         else:    
             target = self.visit_all(node.target, inline=True)
 
