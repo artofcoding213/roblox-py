@@ -7,6 +7,8 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 - kwargs support! (including `**` operator)
 - proper Rojo support for `client`, `server`, & `shared` import targets (this includes `from [...] import *`)
 - matrix multiplication operator (`@`)
+- walrus operator or named expression (`:=`)
+- slicing
 - a **LOT** of bug fixes including:
   - generators
   - list comprehensions
@@ -34,12 +36,18 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 
 fix:
 - `__init__.client.py` (or .server.py) files not showing up as `init.client.luau` (or .server.luau) in `watch` mode
+- `issubclass()` not working on non-class values
 
 add:
 - proper array/string slicing, i.e.:
 ```py
 'hi'[0:1] # 'h'
 [1, 2, 3][-2:-1] # [3]
+```
+- name expressions (walrus operator), i.e.:
+```py
+somefunc(x := math.sin(1+2+3))
+print(x) # -0.2794154982
 ```
 
 ## using lune

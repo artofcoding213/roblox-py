@@ -836,7 +836,7 @@ FN = """\n\nif game then
         return type(obj) == class
     end
     issubclass = function (cls, classinfo) -- issubclass
-        if typeof(cls) ~= "table" or not getmetatable(cls) then
+        if (typeof(cls) ~= "table") or (not getmetatable(cls)) or (not cls._bases) then
             return false
         end
 
@@ -1027,13 +1027,13 @@ function class(class_init, bases)
      	    local meta = {
                 _class = c,
                 _bases = bases,
-                __add = object.__add__,
-                    __sub = object.__sub__,
-                    __mul = object.__mul__,
-                    __div = object.__div__,
-                    __pow = object.__pow__,
-                __unm = object.__unm,
-                __tostring = object.__str__,
+                __add = c.__add__,
+                    __sub = c.__sub__,
+                    __mul = c.__mul__,
+                    __div = c.__div__,
+                    __pow = c.__pow__,
+                __unm = c.__unm,
+                __tostring = c.__str__,
                 __index = function(tbl, idx)
                     local method = c[idx]
                     if typeof(method) == "function" then
@@ -1064,7 +1064,7 @@ function class(class_init, bases)
                 end,
 	        }
 
-            for k, v in pairs(object) do
+            for k, v in pairs(c) do
                 if #k > 3 and k:sub(1, 2) == "__" and not meta[k] then
                     -- to support things like __eq__
                     meta[k] = v
@@ -1290,7 +1290,11 @@ function list_impl(raw)
         end
     end
 
-    function methods.pop()
+    function methods.pop(i)
+        if i ~= nil then
+            return table.remove(raw, i+1)
+        end
+
         return table.remove(raw)
     end
 
@@ -1302,8 +1306,8 @@ function list_impl(raw)
         table.insert(raw, y+1, z)
     end
 
-    function methods.remove(i)
-        table.remove(raw, i)
+    function methods.remove(el)
+        table.remove(raw, table.find(raw, el))
     end
 
     function methods.sort(key, reverse)
@@ -1389,6 +1393,10 @@ function list_impl(raw)
 
         if methods[i] ~= nil then
             return methods[i]
+        end
+
+        if typeof(i) ~= 'number' then
+            return nil
         end
 
         return raw[i+1]

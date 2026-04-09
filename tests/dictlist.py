@@ -11,6 +11,10 @@ assert d.foo == 'bar'
 l = [1, 2]
 l.append(3)
 
+assert 1 in l
+assert 2 in l
+assert 3 in l
+
 assert l[0] == 1
 assert l[1] == 2
 assert l[2] == 3
@@ -23,7 +27,6 @@ assert len(l) == 2
 
 l.insert(0, 5)
 assert l[0] == 5
-
 
 # l = [5, 1, 2]
 l.reverse()

@@ -37,6 +37,9 @@ class NodeVisitor(ast.NodeVisitor):
         self.functions = functions if functions is not None else []
         self.currentFunctionName = currentFunction
         self.generators = generators if generators is not None else []
+        self.is_inline_stack = []
+
+        self.walruslocals = []
 
     def visit_YieldFrom(self, node):
         """Visit yield from"""
@@ -1257,6 +1260,12 @@ class NodeVisitor(ast.NodeVisitor):
         else:
             self.emit(repr("{}".format(node.s)))
 
+    def visit_NamedExpr(self, node):
+        """visit named expr (or walrus operator)"""
+        line = '(function() {target} = {expr} return {target} end)()'
+        self.emit(line.format(line, target=node.target.id, expr=self.visit_all(node.value, inline=True)))
+        self.emit_walruslocal(node.target.id)
+
     def visit_Subscript(self, node):
         """Visit subscript"""
         line = "{name}{indexs}"
@@ -1488,6 +1497,9 @@ class NodeVisitor(ast.NodeVisitor):
             exports=self.exports,
             tl_decls=self.tl_decls,
         )
+        if inline:
+            visitor.is_inline_stack.append(0)
+        visitor.walruslocals = []
 
         if isinstance(nodes, list):
             for node in nodes:
@@ -1503,12 +1515,23 @@ class NodeVisitor(ast.NodeVisitor):
             last_ctx = self.context.last()
             last_ctx["locals"].pop()
 
+        if len(self.is_inline_stack) < 1:
+            for x in visitor.walruslocals+self.walruslocals:
+                self.output.insert(-1, f'local {x};')
+
+            self.walruslocals = []
+        else:
+            self.walruslocals.extend(visitor.walruslocals)
+
         if inline:
             return " ".join(visitor.output)
 
     def emit(self, value):
         """Add translated value to the output"""
         self.output.append(value)
+
+    def emit_walruslocal(self, name):
+        self.walruslocals.append(name)
 
     def depend(self, value):
         if value == "kwargs":
