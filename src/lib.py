@@ -1169,14 +1169,21 @@ function dict_impl(t)
         end
 
         methods.keys = function()
-            return function(self, idx, _) 
-                if idx == nil and key_index ~= nil then
-                    key_index = nil
-                end
-
-                key_index, _ = next(result._data, key_index)
-                return key_index
+            local keys = list({})
+            for k, v in result._data do
+                keys.append(k)
             end
+
+            return keys
+        end
+
+        methods.values = function()
+            local values = list({})
+            for k, v in result._data do
+                values.append(v)
+            end
+
+            return values
         end
 
         methods.pop = function(key, default)
@@ -1212,17 +1219,6 @@ function dict_impl(t)
 
             for k, v in t.items() do
                 result._data[k] = v
-            end
-        end
-
-        methods.values = function()
-            return function(self, idx, _) 
-                if idx == nil and key_index ~= nil then
-                    key_index = nil
-                end
-
-                local key_index, value = next(result._data, key_index)
-                return value
             end
         end
 
@@ -1270,10 +1266,6 @@ function list_impl(raw)
 
     function methods.copy()
         return list(table.clone(raw))
-    end
-
-    function methods.sort(...)
-        mt:__sort__(...)
     end
 
     function methods.reverse(...)
@@ -1418,6 +1410,13 @@ function list_impl(raw)
         return true
     end
 
+    function mt:__add(b)
+        local cpy = methods.copy()
+        cpy.extend(b)
+
+        return cpy
+    end
+
     function mt:__newindex(i, v)
         raw[i+1] = v
     end
@@ -1513,6 +1512,14 @@ function __eq__(x, y)
     end
 
     return x == y
+end
+
+function __add__(a, b)
+    if (typeof(a) == 'table') and (getmetatable(a)) and (getmetatable(a).__add) then
+        return getmetatable(a).__add(a, b)
+    end
+
+    return a+b
 end
 
 """

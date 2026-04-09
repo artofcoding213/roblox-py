@@ -11,6 +11,8 @@ assert d.foo == 'bar'
 l = [1, 2]
 l.append(3)
 
+assert l + [4, 5, 6] == [1,2,3, 4,5,6]
+
 assert 1 in l
 assert 2 in l
 assert 3 in l

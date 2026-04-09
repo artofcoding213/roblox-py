@@ -32,24 +32,14 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 </table>
 
 ## latest commit
-> 4/8/26 (MM/DD/YY)
+> 4/9/26 (MM/DD/YY)
 
 fix:
-- `__init__.client.py` (or .server.py) files not showing up as `init.client.luau` (or .server.luau) in `watch` mode
-- `issubclass()` not working on non-class values
-- `for` loop unpacking not working for tuples (i.e. `for i, [a, b] in enumerate(nested)`)
+- `dict.keys()` & `dict.values()`
 
 add:
-- proper array/string slicing, i.e.:
-```py
-'hi'[0:1] # 'h'
-[1, 2, 3][-2:-1] # [3]
-```
-- name expressions (walrus operator), i.e.:
-```py
-somefunc(x := math.sin(1+2+3))
-print(x) # -0.2794154982
-```
+- `list` addition (i.e. [1, 2, 3] + [4, 5, 6] = [1,2,3, 4,5,6])
+
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:
