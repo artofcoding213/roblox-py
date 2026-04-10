@@ -32,14 +32,13 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 </table>
 
 ## latest commit
-> 4/9/26 (MM/DD/YY)
+> 4/10/26 (MM/DD/YY)
 
 fix:
-- `dict.keys()` & `dict.values()`
+- `in` keyword not working on lists (tests passed because there were numbers in lists and it did [key] ~= nil)
 
 add:
-- `list` addition (i.e. [1, 2, 3] + [4, 5, 6] = [1,2,3, 4,5,6])
-
+- for-loop list expansion for list comprehensions
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:

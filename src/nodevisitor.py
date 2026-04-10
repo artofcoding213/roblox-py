@@ -82,10 +82,7 @@ class NodeVisitor(ast.NodeVisitor):
             t2 = target.replace(" ", "").split(",")
             i = 0
             while i <= (len(t2) - 1):
-                if t2[i] in reserves:
-                    error(f"'{t2[i]}' is a reserved Luau keyword.")
-                else:
-                    i += 1
+                i += 1
 
         local_keyword = ""
 
@@ -103,9 +100,6 @@ class NodeVisitor(ast.NodeVisitor):
             last_ctx["locals"].add_symbol(target)
             if self.context.is_top_level():
                 self.exports.append(target)
-
-        if target in reserves or target in lib.libs:
-            error(f"'{target}' is a reserved Luau keyword.")
 
         self.emit(
             "{local}{target} = {value}".format(
@@ -576,24 +570,27 @@ class NodeVisitor(ast.NodeVisitor):
                 leftval = type(node.left).__name__
                 rightval = type(comparator).__name__
 
-                if leftval == 'Constant':
-                    leftval = (type(node.left.value).__name__).capitalize()
-                if rightval == 'Name':
-                    x = self.visit_all(comparator, inline=True)
-                    rightval = self.variables.get(x)
-                if rightval == 'Constant':
-                    rightval = (type(comparator.value).__name__).capitalize()
-                if leftval == 'Name':
-                    x = self.visit_all(node.left, inline=True)
-                    leftval = self.variables.get(x)
-                ##IN CHECK##
-                if rightval == 'List':
-                    self.depend("dict")
-                    line += f"{op_str}({right}.find({left}) ~= nil)"
-                elif rightval == 'Str':
-                    line += f"{op_str}(string.find({right}, {left}, 1, true) ~= nil)"
-                else:
-                    line += f"{op_str}({right}[{left}] ~= nil)"
+                self.depend('overloads')
+                line += f"({op_str} __in__({right}, {left}))"
+
+                ## if leftval == 'Constant':
+                ##     leftval = (type(node.left.value).__name__).capitalize()
+                ## if rightval == 'Name':
+                ##     x = self.visit_all(comparator, inline=True)
+                ##     rightval = self.variables.get(x)
+                ## if rightval == 'Constant':
+                ##     rightval = (type(comparator.value).__name__).capitalize()
+                ## if leftval == 'Name':
+                ##     x = self.visit_all(node.left, inline=True)
+                ##     leftval = self.variables.get(x)
+                ## ##IN CHECK##
+                ## if rightval == 'List':
+                ##     self.depend("dict")
+                ##     line += f"{op_str}({right}.find({left}) ~= nil)"
+                ## elif rightval == 'Str':
+                ##     line += f"{op_str}(string.find({right}, {left}, 1, true) ~= nil)"
+                ## else:
+                ##     line += f"{op_str}({right}[{left}] ~= nil)"
             else:
                 lop = values['operation']
                 if isinstance(lop, list):
@@ -1189,6 +1186,7 @@ class NodeVisitor(ast.NodeVisitor):
         self.emit("local result = list({})")
 
         ends_count = 0
+        comp_sfx = ''
 
         for comp in node.generators:
             line = "for {target} in {iterator} do"
@@ -1196,6 +1194,29 @@ class NodeVisitor(ast.NodeVisitor):
             self.context.push({ "is_for_target": True })
             if isinstance(comp.target, ast.Name):
                 target = f"_, {comp.target.id}"
+            elif isinstance(comp.target, ast.List):
+                target = f"_, __to_unpack"
+                for i, e in enumerate(comp.target.elts):
+                    assert isinstance(e, ast.Name)
+                    comp_sfx += f'local {e.id} = __to_unpack[{i}]'
+                    comp_sfx += '\n'
+            elif isinstance(comp.target, ast.Tuple):
+                targets = []
+                unpack_num = 0
+
+                for e in comp.target.elts:
+                    if isinstance(e, ast.List):
+                        unpack_name = f'__to_unpack{unpack_num}'
+                        targets.append(unpack_name)
+                        unpack_num += 1
+
+                        for i, unpackee in enumerate(e.elts):
+                            assert isinstance(unpackee, ast.Name)
+                            comp_sfx += f'local {unpackee.id} = {unpack_name}[{i}]\n'
+                    else:
+                        targets.append(self.visit_all(e, inline=True))
+
+                target = ', '.join(targets)
             else:    
                 target = self.visit_all(comp.target, inline=True)
             self.context.pop()
@@ -1212,6 +1233,9 @@ class NodeVisitor(ast.NodeVisitor):
                 line = "if {} then".format(self.visit_all(if_, inline=True))
                 self.emit(line)
                 ends_count += 1
+
+        if comp_sfx:
+            self.emit(comp_sfx)
 
         line = (
             "result.append("
@@ -1352,9 +1376,6 @@ class NodeVisitor(ast.NodeVisitor):
             "name": self.visit_all(node.value, inline=True),
             "indexs": final,
         }
-
-        if values["name"] in reserves:
-            error(f"'{values['name']}'is a reserved Luau keyword.")
 
         self.emit(line.format(**values))
 

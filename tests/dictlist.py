@@ -8,6 +8,10 @@ assert d.foo == 'bar'
 # to support 0-based indexing,
 # and i'm assuming the dict() implementation was well-tested
 
+l2 = ['apple', 'cherry']
+assert 'apple' in l2
+assert 'cherry' in l2
+
 l = [1, 2]
 l.append(3)
 

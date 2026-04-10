@@ -1522,6 +1522,18 @@ function __add__(a, b)
     return a+b
 end
 
+function __in__(xs, x)
+    if typeof(xs) == 'string' then
+        return string.find(xs, x, 1, true) ~= nil
+    end
+
+    if xs._is_list then
+        return xs.find(x) ~= nil
+    end
+
+    return xs[x] ~= nil
+end
+
 """
 
 KWARGS = """\n\n
