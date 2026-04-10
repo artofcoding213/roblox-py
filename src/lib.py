@@ -816,6 +816,10 @@ FN = """\n\nif game then
         return obj[name] ~= nil
     end
     isinstance = function (obj, class) -- isinstance
+        if typeof(obj) ~= 'table' then
+            return false
+        end
+
         local mt = getmetatable(obj)
         if class and typeof(class) == 'table' then
             if class._is_list_class then

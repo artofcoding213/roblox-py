@@ -36,9 +36,11 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 
 fix:
 - `in` keyword not working on lists (tests passed because there were numbers in lists and it did [key] ~= nil)
+- `isinstance()` throwing on non-class values
 
 add:
 - for-loop list expansion for list comprehensions
+- forced opt-in to `--!native`
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:
