@@ -24,7 +24,7 @@ class NodeVisitor(ast.NodeVisitor):
 
     """Node visitor"""
 
-    def __init__(self, context=None, config=None, variables=None, functions=None, currentFunction=None, generators=None, exports=[], tl_decls=[]):
+    def __init__(self, context=None, config=None, variables=None, functions=None, currentFunction=None, generators=None, exports=[], tl_decls=[], comp_i=0):
         dependencies = []
         self.exports = exports
         self.tl_decls = tl_decls # we store these so classes are predefined at the top of a file
@@ -38,6 +38,7 @@ class NodeVisitor(ast.NodeVisitor):
         self.currentFunctionName = currentFunction
         self.generators = generators if generators is not None else []
         self.is_inline_stack = []
+        self.comp_i = comp_i
 
         self.walruslocals = []
 
@@ -1181,9 +1182,12 @@ class NodeVisitor(ast.NodeVisitor):
 
     def visit_ListComp(self, node):
         """Visit list comprehension"""
+        result_name = f"comp_res{self.comp_i}"
+        self.comp_i = (self.comp_i+1)*2
+
         self.depend("dict")
         self.emit("(function()")
-        self.emit("local result = list({})")
+        self.emit(f"local {result_name} = list({{}})")
 
         ends_count = 0
         comp_sfx = ''
@@ -1238,7 +1242,7 @@ class NodeVisitor(ast.NodeVisitor):
             self.emit(comp_sfx)
 
         line = (
-            "result.append("
+            f"{result_name}.append("
             + str(self.visit_all(node.elt, inline=True))
             + ")"
         )
@@ -1246,7 +1250,7 @@ class NodeVisitor(ast.NodeVisitor):
 
         self.emit(" ".join(["end"] * ends_count))
 
-        self.emit("return result")
+        self.emit(f"return {result_name}")
         self.emit("end)()")
 
     def visit_Module(self, node):
@@ -1534,6 +1538,7 @@ class NodeVisitor(ast.NodeVisitor):
             generators=self.generators,
             exports=self.exports,
             tl_decls=self.tl_decls,
+            comp_i=self.comp_i*2,
         )
         if inline:
             visitor.is_inline_stack.append(0)
