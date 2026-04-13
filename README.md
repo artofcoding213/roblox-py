@@ -32,12 +32,13 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 </table>
 
 ## latest commit
-> 4/11/26 (MM/DD/YY)
+> 4/12/26 (MM/DD/YY)
 
 fix:
-- nested list comprehensions
+- `+` not working on strings
 
 add:
+- negative `list` indexing
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:

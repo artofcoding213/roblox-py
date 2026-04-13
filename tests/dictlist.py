@@ -20,6 +20,7 @@ assert l + [4, 5, 6] == [1,2,3, 4,5,6]
 assert 1 in l
 assert 2 in l
 assert 3 in l
+assert l[-1] == 3
 
 assert l[0] == 1
 assert l[1] == 2

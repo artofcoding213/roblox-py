@@ -1151,6 +1151,15 @@ function dict_impl(t)
 
         local key_index = nil
 
+        methods.reverse = function()
+            local rev = {}
+            for k, v in result._data do
+                rev[v] = k
+            end
+
+            return dict(rev)
+        end
+
         methods.clear = function()
             result._data = {}
         end
@@ -1272,10 +1281,6 @@ function list_impl(raw)
         return list(table.clone(raw))
     end
 
-    function methods.reverse(...)
-        mt:__reverse__()
-    end
-
     function methods.append(x)
         table.insert(raw, x)
     end
@@ -1395,6 +1400,10 @@ function list_impl(raw)
             return nil
         end
 
+        if i < 0 then
+            i = #raw + i
+        end
+
         return raw[i+1]
     end
 
@@ -1460,12 +1469,17 @@ function __unpack__(exp, ...)
     local args = {...}
 
     if (#args == 1) and (typeof(args[1]) == 'table') and (args[1]._is_list == true) then
-        assert(#args[1] == exp, `expected {exp} values to unpack, got {#args[1]}`)
+        if exp > 0 then
+            assert(#args[1] == exp, `expected {exp} values to unpack, got {#args[1]}`)
+        end
 
         return unpack(args[1].raw())
     end
 
-    assert(#args == exp, `expected {exp} values to unpack, got {#args}`)
+    if exp > 0 then
+        assert(#args == exp, `expected {exp} values to unpack, got {#args}`)
+    end
+    
     return ...
 end
 """
@@ -1519,7 +1533,14 @@ function __eq__(x, y)
 end
 
 function __add__(a, b)
-    if (typeof(a) == 'table') and (getmetatable(a)) and (getmetatable(a).__add) then
+    at = typeof(a)
+    bt = typeof(b)
+
+    if at == 'string' and bt == 'string' then
+        return a .. b
+    end
+
+    if (at == 'table') and (getmetatable(a)) and (getmetatable(a).__add) then
         return getmetatable(a).__add(a, b)
     end
 

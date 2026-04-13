@@ -796,7 +796,8 @@ class NodeVisitor(ast.NodeVisitor):
         body = self.output[-1]
 
         if node.args.vararg is not None:
-            line = "local {name} = {{...}}".format(name=node.args.vararg.arg)
+            self.depend('dict')
+            line = "local {name} = list({{...}})".format(name=node.args.vararg.arg)
             body.insert(0, line)
 
         arg_index = -1
@@ -1128,14 +1129,26 @@ class NodeVisitor(ast.NodeVisitor):
 
     def visit_Lambda(self, node):
         """Visit lambda"""
-        line = "function({arguments}) return"
+        line = "function({arguments})"
+        pfx = ''
 
         arguments = [arg.arg for arg in node.args.args]
+        if node.args.vararg is not None:
+            arguments.append('...')
+            self.depend('dict')
+            pfx += f'local {node.args.vararg.arg} = list({{...}})'
+
+        if node.args.kwarg is not None:
+            pfx += f'local {node.args.kwarg.arg} = __kwargs__()'
 
         function_def = line.format(arguments=", ".join(arguments))
 
         output = []
         output.append(function_def)
+        if pfx:
+            output.append(pfx)
+
+        output.append('return ')
         output.append(self.visit_all(node.body, inline=True))
         output.append("end")
 
@@ -1290,8 +1303,9 @@ class NodeVisitor(ast.NodeVisitor):
 
     def visit_Starred(self, node):
         """Visit starred object"""
+        self.depend('dict')
         value = self.visit_all(node.value, inline=True)
-        line = "unpack({})".format(value)
+        line = "__unpack__(-1, {})".format(value)
         self.emit(line)
 
     def visit_Str(self, node):
