@@ -1346,6 +1346,15 @@ function list_impl(raw)
         return table.find(raw, x)
     end
 
+    function methods.index(el)
+        local a = table.find(raw, el)
+        if typeof(a) ~= 'number' then
+            return nil
+        end
+
+        return a-1
+    end
+
     function methods.reverse()
         for i = 1, math.floor(#raw / 2) do
             raw[i], raw[#raw-i + 1] = raw[#raw-i + 1], raw[i]

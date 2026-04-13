@@ -39,6 +39,8 @@ fix:
 
 add:
 - negative `list` indexing
+- `--!native` optimizations for `pyruntime`
+- `.index()` method for `list`
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:

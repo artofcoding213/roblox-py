@@ -131,7 +131,7 @@ class Translator:
             for depend in lib.libs:
                 allDepends += f'["{depend}"] = {depend},'
             DEPEND += "\n\nreturn {" + allDepends + "}\n"
-            return DEPEND
+            return HEADER + DEPEND
 
         CODE = self.to_code()
         ERRS = "\n\n--> error handling\n"
