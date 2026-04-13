@@ -1,5 +1,4 @@
-## roblox-py <i>(artofcoding213's fork)</i>
-
+## roblox-py (v4) <i>(artofcoding213's fork)</i>
 .py -> .luau transpiler\
 this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compilers/roblox-py), notably adding:
 - class inheritence (w/ `super()`, proper `issubclass()` & `isinstance()` impls)
@@ -41,6 +40,7 @@ add:
 - negative `list` indexing
 - `--!native` optimizations for `pyruntime`
 - `.index()` method for `list`
+- v4 rebranding
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:
