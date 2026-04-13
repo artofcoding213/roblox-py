@@ -1050,6 +1050,10 @@ function class(class_init, bases)
                         end
                     end
 
+                    if idx == "__class__" then
+                        return c
+                    end
+
                     for _, base in ipairs(bases) do
                         local base_method = base[idx]
                         if typeof(base_method) == "function" then

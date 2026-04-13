@@ -19,6 +19,7 @@ class b(a):
 assert issubclass(b, a)
 
 c = b()
+assert c.__class__ == b
 assert isinstance(c, b)
 assert isinstance(c, a)
 assert c.descend_a

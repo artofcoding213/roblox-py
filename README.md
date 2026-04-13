@@ -31,7 +31,7 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 </table>
 
 ## latest commit
-> 4/12/26 (MM/DD/YY)
+> 4/13/26 (MM/DD/YY)
 
 fix:
 - `+` not working on strings
@@ -41,6 +41,7 @@ add:
 - `--!native` optimizations for `pyruntime`
 - `.index()` method for `list`
 - v4 rebranding
+- `__class__`
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:
