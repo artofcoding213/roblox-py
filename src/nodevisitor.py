@@ -777,6 +777,8 @@ class NodeVisitor(ast.NodeVisitor):
             self.depend("kwargs")
             self.emit(f"local {kwarg} = __kwargs__()")
             for arg in arguments:
+                if arg in ['...']:
+                    continue
                 self.emit(f"{arg} = {kwarg}.get('{arg}') or {arg}")
 
         self.context.push({"class_name": "", "direct_class": False, "locals": SymbolsStack()})
@@ -1405,7 +1407,7 @@ class NodeVisitor(ast.NodeVisitor):
             return
 
         self.depend("dict")
-        line = "list(table.freeze({{{}}}))".format(", ".join(elements))
+        line = "list(table.freeze({{{}}}), true)".format(", ".join(elements))
 
         self.emit(line)
 

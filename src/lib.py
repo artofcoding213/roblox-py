@@ -34,7 +34,7 @@ local _cmplxMeta = {
 		end
 	end,
 	__newindex = function(n, index, value)
-		if type(index) == "number" or type(index) == "string" then
+		if typeof(index) == "number" or typeof(index) == "string" then
 			error(index .. " cannot be assigned to")
 		else
 			error("invalid argument #2 (number or string expected, got " .. typeof(index) .. ")")
@@ -44,11 +44,11 @@ local _cmplxMeta = {
 		return setmetatable({-n[1], -n[2]}, getmetatable(n))
 	end,
 	__add = function(n1, n2) -- Adds two numbers.
-		if (type(n1) == "number" or type(n2) == "number") or (type(n1) == "table" and type(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
-			if type(n1) == "number" then
+		if (typeof(n1) == "number" or typeof(n2) == "number") or (typeof(n1) == "table" and typeof(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
+			if typeof(n1) == "number" then
 				n1 = {n1, 0}
 			end
-			if type(n2) == "number" then
+			if typeof(n2) == "number" then
 				n2 = {n2, 0}
 			end
 
@@ -66,7 +66,7 @@ local _cmplxMeta = {
 
 			return setmetatable({t1, t2}, getmetatable(n1) or getmetatable(n2))
 		else
-			if type(n1) == type(n2) then
+			if typeof(n1) == typeof(n2) then
 				error("attempt to perform arithmetic (add) on " .. typeof(n1))
 			else
 				error("attempt to perform arithmetic (add) on " .. typeof(n1) .. "and" .. typeof(n2))
@@ -74,11 +74,11 @@ local _cmplxMeta = {
 		end
 	end,
 	__sub = function(n1, n2) -- Subtracts the first number with the second one.
-		if (type(n1) == "number" or type(n2) == "number") or (type(n1) == "table" and type(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
-			if type(n1) == "number" then
+		if (typeof(n1) == "number" or typeof(n2) == "number") or (typeof(n1) == "table" and typeof(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
+			if typeof(n1) == "number" then
 				n1 = {n1, 0}
 			end
-			if type(n2) == "number" then
+			if typeof(n2) == "number" then
 				n2 = {n2, 0}
 			end
 
@@ -96,7 +96,7 @@ local _cmplxMeta = {
 
 			return setmetatable({t1, t2}, getmetatable(n1) or getmetatable(n2))
 		else
-			if type(n1) == type(n2) then
+			if typeof(n1) == typeof(n2) then
 				error("attempt to perform arithmetic (sub) on " .. typeof(n1))
 			else
 				error("attempt to perform arithmetic (sub) on " .. typeof(n1) .. "and" .. typeof(n2))
@@ -104,11 +104,11 @@ local _cmplxMeta = {
 		end
 	end,
 	__mul = function(n1, n2) -- Multiply two numbers.
-		if (type(n1) == "number" or type(n2) == "number") or (type(n1) == "table" and type(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
-			if type(n1) == "number" then
+		if (typeof(n1) == "number" or typeof(n2) == "number") or (typeof(n1) == "table" and typeof(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
+			if typeof(n1) == "number" then
 				n1 = {n1, 0}
 			end
-			if type(n2) == "number" then
+			if typeof(n2) == "number" then
 				n2 = {n2, 0}
 			end
 
@@ -122,7 +122,7 @@ local _cmplxMeta = {
 
 			return setmetatable({t1, t2}, getmetatable(n1) or getmetatable(n2))
 		else
-			if type(n1) == type(n2) then
+			if typeof(n1) == typeof(n2) then
 				error("attempt to perform arithmetic (mul) on " .. typeof(n1))
 			else
 				error("attempt to perform arithmetic (mul) on " .. typeof(n1) .. "and" .. typeof(n2))
@@ -130,11 +130,11 @@ local _cmplxMeta = {
 		end
 	end,
 	__div = function(n1, n2) -- Divides two numbers.
-		if (type(n1) == "number" or type(n2) == "number") or (type(n1) == "table" and type(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
-			if type(n1) == "number" then
+		if (typeof(n1) == "number" or typeof(n2) == "number") or (typeof(n1) == "table" and typeof(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
+			if typeof(n1) == "number" then
 				n1 = {n1, 0}
 			end
-			if type(n2) == "number" then
+			if typeof(n2) == "number" then
 				n2 = {n2, 0}
 			end
 
@@ -160,7 +160,7 @@ local _cmplxMeta = {
 
 			return setmetatable({t1, t2}, getmetatable(n1) or getmetatable(n2))
 		else
-			if type(n1) == type(n2) then
+			if typeof(n1) == typeof(n2) then
 				error("attempt to perform arithmetic (div) on " .. typeof(n1))
 			else
 				error("attempt to perform arithmetic (div) on " .. typeof(n1) .. "and" .. typeof(n2))
@@ -180,11 +180,11 @@ local _cmplxMeta = {
 			return 1 / math.tan(x)
 		end
 
-		if (type(n1) == "number" or type(n2) == "number") or (type(n1) == "table" and type(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
-			if type(n1) == "number" then
+		if (typeof(n1) == "number" or typeof(n2) == "number") or (typeof(n1) == "table" and typeof(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
+			if typeof(n1) == "number" then
 				n1 = {n1, 0}
 			end
-			if type(n2) == "number" then
+			if typeof(n2) == "number" then
 				n2 = {n2, 0}
 			end
 
@@ -202,7 +202,7 @@ local _cmplxMeta = {
 
 			return setmetatable({norm * math.cos(i), norm * math.sin(i)}, getmetatable(n1) or getmetatable(n2))
 		else
-			if type(n1) == type(n2) then
+			if typeof(n1) == typeof(n2) then
 				error("attempt to perform arithmetic (pow) on " .. typeof(n1))
 			else
 				error("attempt to perform arithmetic (pow) on " .. typeof(n1) .. "and" .. typeof(n2))
@@ -210,11 +210,11 @@ local _cmplxMeta = {
 		end
 	end,
 	__eq = function(n1, n2) -- Tests for equality.
-		if (type(n1) == "number" or type(n2) == "number") or (type(n1) == "table" and type(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
-			if type(n1) == "number" then
+		if (typeof(n1) == "number" or typeof(n2) == "number") or (typeof(n1) == "table" and typeof(n2) == "table" and getmetatable(n1) == getmetatable(n2)) then
+			if typeof(n1) == "number" then
 				n1 = {n1, 0}
 			end
-			if type(n2) == "number" then
+			if typeof(n2) == "number" then
 				n2 = {n2, 0}
 			end
 
@@ -255,15 +255,12 @@ local _cmplxMeta = {
 
 		return t1 .. t2
 	end,
-	__type = function(n)
-		return typeof(n)
-	end,
 }
 
 local _cmplxFactory = {
 	__call = function(t, re, im)
-		re = type(re) == "number" and re or 0
-		im = type(im) == "number" and im or 0
+		re = typeof(re) == "number" and re or 0
+		im = typeof(im) == "number" and im or 0
 		local cmplx = { re, im }
 		setmetatable(cmplx, _cmplxMeta)
 		return cmplx
@@ -529,6 +526,8 @@ libs = [
     "complex",
     "class",
     "dict",
+    "list",
+    "tuple",
     "__name__",
     "range",
     "len",
@@ -584,6 +583,7 @@ libs = [
     "repr",
     "sorted",
     "vars",
+    "type",
 ]
 
 DEPENDENCY = """\n\n--> imports
@@ -625,24 +625,47 @@ FN = """\n\nif game then
         end
         return total
     end
-    max = function(tbl) --max()
+    max = function(...) --max()
         local maxValue = -math.huge
-        for _, v in ipairs(tbl) do
+        for _, v in ipairs({...}) do
             if v > maxValue then
                 maxValue = v
             end
         end
         return maxValue
     end
-    min = function(tbl) --min()
+    min = function(...) --min()
         local minValue = math.huge
-        for _, v in ipairs(tbl) do
+        for _, v in ipairs({...}) do
             if v < minValue then
                 minValue = v
             end
         end
         return minValue
     end
+    type = function(x, raw)
+        local t = typeof(x)
+        if raw == true then
+            return t
+        end
+
+        if t == 'number' then
+            if math.floor(x) == x then
+                return int
+            end
+
+            return float
+        end
+
+        if t == 'table' then
+            local mt = getmetatable(x)
+            if mt and mt.__type__ then
+                return mt.__type__(x)
+            end
+        end
+
+		return t
+	end
     reversed = function(xs, ...) -- reversed()
         local tmp = xs.copy()
         __call__(tmp.reverse, __kwargs__(), ...)
@@ -675,7 +698,9 @@ FN = """\n\nif game then
         if rawget(fun) ~= fun then warn("At the momement Roblox.py's function callable() does not fully support metatables.") end
         return typeof(rawget(fun))	== "function"
     end
-    float = tonumber -- float()
+    float = function(x)
+        return tonumber(x)
+    end -- float()
     format = function(format, ...) -- format
         local args = {...}
         local num_args = select("#", ...)
@@ -837,7 +862,7 @@ FN = """\n\nif game then
             return issubclass(mt._class, class)
         end 
 
-        return type(obj) == class
+        return typeof(obj) == class
     end
     issubclass = function (cls, classinfo) -- issubclass
         if (typeof(cls) ~= "table") or (not getmetatable(cls)) or (not cls._bases) then
@@ -853,7 +878,7 @@ FN = """\n\nif game then
         return false
     end
     iter = function (obj) -- iter
-        if type(obj) == "table" and obj.__iter__ ~= nil then
+        if typeof(obj) == "table" and obj.__iter__ ~= nil then
             return obj.__iter__
         end
         return nil
@@ -921,33 +946,33 @@ FN = """\n\nif game then
     end
 
     bytearray = function (arg) -- bytearray
-        if type(arg) == "string" then
+        if typeof(arg) == "string" then
             local bytes = {}
             for i = 1, #arg do
                 table.insert(bytes, string.byte(arg, i))
             end
             return bytes
-        elseif type(arg) == "number" then
+        elseif typeof(arg) == "number" then
             local bytes = {}
             while arg > 0 do
                 table.insert(bytes, 1, arg % 256)
                 arg = math.floor(arg / 256)
             end
             return bytes
-        elseif type(arg) == "table" then
+        elseif typeof(arg) == "table" then
             return arg -- Assuming it's already a bytearray table
         else
             error("Invalid argument type for bytearray()")
         end
     end
     bytes = function (arg) -- bytes
-        if type(arg) == "string" then
+        if typeof(arg) == "string" then
             local bytes = {}
             for i = 1, #arg do
                 table.insert(bytes, string.byte(arg, i))
             end
             return bytes
-        elseif type(arg) == "table" then
+        elseif typeof(arg) == "table" then
             return arg -- Assuming it's already a bytes table
         else
             error("Invalid argument type for bytes()")
@@ -956,11 +981,11 @@ FN = """\n\nif game then
     compile = loadstring
     help = function (object) -- help
         print("Help for object:", object)
-        print("Type:", type(object))
+        print("Type:", typeof(object))
         print("Learn more in the official roblox documentation!")
     end
     memoryview = function (object) -- memoryview
-        if type(object) == "table" then
+        if typeof(object) == "table" then
             local buffer = table.concat(object)
             return { buffer = buffer, itemsize = 1 }
         else
@@ -1239,6 +1264,10 @@ function dict_impl(t)
             end
         end
 
+        function methods.raw()
+            return result._data
+        end
+
         setmetatable(result, {
             __index = function(self, index)
                 if result._data[index] ~= nil then
@@ -1258,6 +1287,10 @@ function dict_impl(t)
 
                 return key_index, v
             end,
+
+            __type__ = function(self)
+                return dict
+            end,
         })
 
         return result
@@ -1273,9 +1306,16 @@ if not _G._list_mt then
     _G._list_mt = {}
 end
 
+function tuple(...)
+    local t = {...}
+    table.freeze(t)
+
+    return list(t, true)
+end
+
 list = {}
 
-function list_impl(raw)
+function list_impl(raw, is_tuple)
     raw = raw or {}
 
     local methods = {}
@@ -1467,6 +1507,14 @@ function list_impl(raw)
 
         k, v = next(raw, k)
         return v
+    end
+
+    function mt:__type__()
+        if is_tuple then
+            return tuple
+        end
+
+        return list
     end
 
     return setmetatable({}, mt)

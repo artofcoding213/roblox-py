@@ -31,17 +31,17 @@ this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compile
 </table>
 
 ## latest commit
-> 4/13/26 (MM/DD/YY)
+> 4/25/26 (MM/DD/YY)
 
 fix:
-- `+` not working on strings
 
 add:
-- negative `list` indexing
-- `--!native` optimizations for `pyruntime`
-- `.index()` method for `list`
-- v4 rebranding
-- `__class__`
+- `type()` returning proper values, i.e.:\
+  - `type(3) == int`
+  - `type(3.1) == float`
+  - `type([1, 2, 3]) == list`
+  - `type({}) == dict`
+  - `type((1,)) == tuple`
 
 ## using lune
 this repo **requires** [`lune`](https://github.com/lune-org/lune) installed to use *some* features:
