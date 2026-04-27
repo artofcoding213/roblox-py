@@ -1,4 +1,6 @@
 ## roblox-py (v4) <i>(artofcoding213's fork)</i>
+> **archived:** i am working on a better, more organized rewrite of the entire project, it will be on my github
+
 .py -> .luau transpiler\
 this is a fork of [roblox-compilers/roblox-py](https://github.com/roblox-compilers/roblox-py), notably adding:
 - class inheritence (w/ `super()`, proper `issubclass()` & `isinstance()` impls)
